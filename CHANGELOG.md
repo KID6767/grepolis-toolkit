@@ -1,5 +1,15 @@
 ﻿## [0.9.2] - 2025-09-28
-- Release 0.9.2
+### Added
+- Global Finder rozszerzony o ghost towns (miasta opuszczone) i graczy nieaktywnych
+- Filtry w wyszukiwaniu miast (aktywni, ghosty, sojusz, wyspy)
+- Multi-target planner – możliwość dodawania wielu celów w jednej kalkulacji
+- Historia działań – zapisywanie i podgląd skanów oraz kalkulacji
+- Ikonka GT w interfejsie (łatwe otwieranie panelu)
+
+### Improved
+- UI: poprawione okna, ciemny panel dopasowany do Grepolis
+- Eksport BBCode: formatowanie tabel i wsparcie dla notatek sojuszu
+- Stabilność skryptu i optymalizacja kodu
 
 ## v0.9.1 (2025-09-28)
 - Global Finder (ghost/player/alliance/radius) with filters

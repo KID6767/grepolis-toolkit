@@ -1,41 +1,38 @@
-﻿<p align="center">
-  <img src="assets/logo.svg" width="120" alt="Grepolis Toolkit Logo"/>
-</p>
+﻿# Grepolis Toolkit
 
-# Grepolis Toolkit
+<img src="assets/logo.svg" width="120" alt="logo">
 
-Zestaw narzÄ™dzi Grepolis: planer atakĂłw, globalny finder, eksport BBCode i wiÄ™cej.
+Zestaw narzędzi Grepolis: planer ataków, globalny finder, eksport BBCode i więcej.
 
 ---
 
-## Features
-- âš”ď¸Ź **Planer atakĂłw** â€“ wyszukiwanie miast po nazwie/ID, buffy (Posejdon, Ĺ»agle, Kapitan), ETA, animowana nakĹ‚adka trasy  
-- đźŚŤ **Global Finder** â€“ skanowanie wysp, wyszukiwanie miast graczy, sojuszy i ghost towns  
-- đź“ť **Eksport BBCode** â€“ kopiowanie wynikĂłw do forum/sojuszu/notatek  
-- âŹ±ď¸Ź **Historia obliczeĹ„** â€“ szybki dostÄ™p do ostatnich kalkulacji  
-- đź“Ś **Panel zadokowany pod Forum** â€“ wygodne otwieranie i ukrywanie dodatku  
+## ✨ Features
+- **Planer ataków** – wyszukiwanie miast po nazwie/ID, buffy (Posejdon, Żagle, Kapitan), ETA, animowana nakładka trasy
+- **Global Finder** – skanowanie wysp i świata, wyszukiwanie miast graczy, sojuszy i ghost towns
+- **Eksport BBCode** – kopiowanie wyników do forum/sojuszu/notatek
+- **Historia działań** – log skanów, kalkulacji i eksportów
+- **Multi-target planner** – dodawanie wielu celów jednocześnie
+- **Panel z dockiem pod Forum** – wygodne otwieranie i nawigacja
 
 ---
 
-## Instalacja
-1. Zainstaluj [Tampermonkey](https://www.tampermonkey.net/) w swojej przeglÄ…darce  
-2. Kliknij [**Grepolis Toolkit.user.js**](https://github.com/KID6767/grepolis-toolkit/raw/main/grepolis-toolkit.user.js)  
-3. Tampermonkey zapyta o instalacjÄ™ â€“ zaakceptuj  
+## 📥 Instalacja
+1. Zainstaluj [Tampermonkey](https://www.tampermonkey.net/) w swojej przeglądarce  
+2. Kliknij [Grepolis Toolkit.user.js](https://github.com/KID6767/grepolis-toolkit/raw/main/grepolis-toolkit.user.js)  
+3. Potwierdź instalację  
 
 ---
 
-## Screenshots
-*(przykĹ‚adowe zrzuty ekranu z dziaĹ‚ania narzÄ™dzia moĹĽna tu wkleiÄ‡ pĂłĹşniej)*
+## 📸 Zrzuty ekranu
+*(w przygotowaniu – pojawią się przykładowe screeny)*  
 
 ---
 
-## Wersje
-Zmiany sÄ… opisane w pliku [CHANGELOG.md](CHANGELOG.md).
+## 📝 Wersja
+Zmiany: [CHANGELOG.md](CHANGELOG.md)  
 
 ---
 
-## Autorzy
-- **KID6767**  
-- **ChatGPT (OpenAI)** â€“ wsparcie przy kodzie i automatyzacjach  
-
-
+## 👥 Autorzy
+- **KID6767** – główny developer  
+- **ChatGPT (OpenAI)** – wsparcie przy kodowaniu i automatyzacji  
