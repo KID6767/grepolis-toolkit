@@ -1,72 +1,66 @@
-param(
+param (
     [string]$Version
 )
 
-$ErrorActionPreference = "Stop"
+$scriptPath = "grepolis-toolkit.user.js"
+$changelogPath = "CHANGELOG.md"
+$readmePath = "README.md"
 
-$repoPath  = $PSScriptRoot
-$changelog = Join-Path $repoPath "CHANGELOG.md"
-$readme    = Join-Path $repoPath "README.md"
-$userjs    = Join-Path $repoPath "grepolis-toolkit.user.js"
-
-# 1) bump @version in user.js
-if (Test-Path $userjs) {
-    (Get-Content $userjs -Raw) -replace '(?m)^(//\s*@version\s+)(\d+\.\d+)', "`$1$Version" | Set-Content $userjs -Encoding UTF8
-    Write-Host "[OK] Bumped version in grepolis-toolkit.user.js -> $Version"
-} else {
-    Write-Host "[WARN] grepolis-toolkit.user.js not found"
+# --- Update version in .user.js ---
+if (Test-Path $scriptPath) {
+    (Get-Content $scriptPath) |
+        ForEach-Object { $_ -replace "(?<=@version\s+)\d+(\.\d+)*", $Version } |
+        Set-Content $scriptPath -Encoding UTF8
+    Write-Host "[OK] Bumped version in $scriptPath -> $Version"
 }
 
-# 2) CHANGELOG
-$date = Get-Date -Format "yyyy-MM-dd"
-$entry = @"
-## v$Version ($date)
-- Global Finder: player, alliance, ghosts near (beta)
-- Planner: ETA h:m:s, auto world speed, calculation history
-- BBCode v2
-- Panel placed under Forum (left menu)
-"@
-if (Test-Path $changelog) {
-    $old = Get-Content $changelog -Raw
-    Set-Content $changelog ($entry + "`r`n" + $old) -Encoding UTF8
-} else {
-    Set-Content $changelog $entry -Encoding UTF8
+# --- Update CHANGELOG.md ---
+if (Test-Path $changelogPath) {
+    $date = Get-Date -Format "yyyy-MM-dd"
+    $entry = "## [$Version] - $date`n- Updated features and fixes`n"
+    Add-Content $changelogPath "`n$entry"
+    Write-Host "[OK] $changelogPath updated"
 }
-Write-Host "[OK] CHANGELOG.md updated"
 
-# 3) README header (logo + title) and Features section if missing
-if (Test-Path $readme) {
-    $rd = Get-Content $readme -Raw
-    if ($rd -notmatch '<img src="assets/logo.svg"') {
-        $logo = '<p align="center"><img src="assets/logo.svg" width="120"></p>'
-        $rd   = $logo + "`r`n" + $rd
-        Set-Content $readme $rd
-        Write-Host "[OK] README.md - dodano logo i nagłówek"
-    } else {
-        Write-Host "[OK] README.md - logo już istnieje"
+# --- Update README.md (logo + features) ---
+if (Test-Path $readmePath) {
+    $rd = Get-Content $readmePath -Raw
+
+    # Add logo if missing
+    if ($rd -notmatch "<img src=""assets/logo.svg""") {
+        $logoBlock = "<img src=""assets/logo.svg"" alt=""Grepolis Toolkit"" width=""120"">`n"
+        $rd = $logoBlock + $rd
+        Set-Content $readmePath $rd -Encoding UTF8
+        Write-Host "[OK] README.md - added logo"
+    }
+    else {
+        Write-Host "[OK] README.md - logo already present"
     }
 
-    if ($rd -notmatch '## Features') {
+    # Add Features if missing
+    if ($rd -notmatch "## Features") {
         $features = @"
 ## Features
-- Attack Planner (name/ID search, buffs, ETA, route overlay)
-- Global Finder (Player / Alliance / Ghosts near)
-- BBCode export
-- Calculation history
-- Panel docked under Forum
+- ⚔️ Attack Planner – search cities by name/ID, buffs (Poseidon, Sails, Captain), ETA, animated route overlay
+- 🌍 Global Finder – scan islands, find players, alliances and ghost towns
+- 📝 BBCode Export – copy results for forum/alliance/notes
+- ⏱️ History of calculations – quick access to recent results
+- 📌 Docked panel below Forum – easy to toggle
 "@
-        Add-Content $readme "`r`n$features"
-        Write-Host "[OK] README.md - dodano Features"
+        $rd = $rd + "`r`n" + $features
+        Set-Content $readmePath $rd -Encoding UTF8
+        Write-Host "[OK] README.md - added Features"
     }
-} else {
-    Write-Host "[WARN] README.md not found"
+    else {
+        Write-Host "[OK] README.md - Features already present"
+    }
 }
 
-# 4) git commit / tag / push
+# --- Commit & Tag ---
 git add .
 git commit -m "Release $Version"
-git tag -a "v$Version" -m "Release $Version"
-git push origin main
+git tag "v$Version"
+git push
 git push origin "v$Version"
 
 Write-Host "[DONE] Release $Version ready and pushed to GitHub"
