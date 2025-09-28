@@ -1,52 +1,102 @@
 // ==UserScript==
 // @name         Grepolis Toolkit
 // @namespace    https://github.com/KID6767/grepolis-toolkit
-// @version      0.9.6
-// @description  Planner (ETA, multi-target, BBCode), Finder (island/player/alliance/ghosts), log, minimap, hotkeys, robust icon
+// @version      0.9.5
+// @description  Planner (ETA, multi-target, BBCode), Finder (island/player/alliance/ghosts), log, minimap, hotkeys, animated icon
 // @author       KID6767
 // @match        https://*.grepolis.com/*
 // @match        http://*.grepolis.com/*
 // @exclude      https://forum*.grepolis.*/*
 // @exclude      http://forum*.grepolis.*/*
 // @grant        GM_addStyle
-// @updateURL    https://github.com/KID6767/grepolis-toolkit/raw/main/grepolis-toolkit.user.js
-// @downloadURL  https://github.com/KID6767/grepolis-toolkit/raw/main/grepolis-toolkit.user.js
 // @run-at       document-end
 // ==/UserScript==
 
 (function () {
   'use strict';
-  if (window.__GT_LOADED__) return; // pojedyncze uruchomienie
-  window.__GT_LOADED__ = true;
+
+  /***********************
+   *  EMBED ICON (SVG)
+   ***********************/
+  // Lekki złoty „trójząb/maszt” z poświatą. Wersja data:svg – zero zewnętrznych plików.
+  const ICON_SVG = encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <defs>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="2" result="b"/>
+          <feMerge>
+            <feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+      <g fill="#ffd257" filter="url(#glow)">
+        <circle cx="32" cy="8" r="3"/>
+        <rect x="29" y="10" width="6" height="22" rx="3"/>
+        <rect x="14" y="28" width="36" height="10" rx="5"/>
+        <rect x="12" y="24" width="6"  height="10" rx="3"/>
+        <rect x="46" y="24" width="6"  height="10" rx="3"/>
+        <rect x="22" y="38" width="20" height="10" rx="5"/>
+      </g>
+    </svg>
+  `);
 
   /***********************
    *  STYLES
    ***********************/
   GM_addStyle(`
-  .gt-toast{position:fixed;right:18px;bottom:18px;background:rgba(20,18,15,.96);color:#f7e3b1;border:1px solid #6d5a2f;padding:10px 12px;border-radius:10px;z-index:2147483646;box-shadow:0 10px 24px rgba(0,0,0,.5)}
-  .gt-btn{cursor:pointer;border-radius:8px;border:1px solid #6d5a2f;background:#1f1b16;color:#ffd257;font-weight:700;display:inline-flex;gap:6px;align-items:center;justify-content:center}
-  #gt-panel{position:fixed;right:18px;bottom:18px;width:480px;max-height:80vh;overflow:auto;background:rgba(0,0,0,.88);border:1px solid #6d5a2f;border-radius:14px;color:#f1e4c2;z-index:2147483645;display:none}
-  #gt-panel header{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #6d5a2f}
+  :root{
+    --gt-bg:#1d1a15; --gt-panel:#1f1b16; --gt-accent:#ffd257;
+    --gt-text:#f1e4c2; --gt-border:#6d5a2f;
+  }
+  .gt-toast{position:fixed;right:18px;bottom:18px;background:rgba(20,18,15,.96);color:var(--gt-text);
+    border:1px solid var(--gt-border);padding:10px 12px;border-radius:10px;z-index:999999;box-shadow:0 10px 24px rgba(0,0,0,.5)}
+  .gt-btn{cursor:pointer;border-radius:8px;border:1px solid var(--gt-border);background:var(--gt-panel);color:var(--gt-accent);
+    font-weight:700;display:inline-flex;gap:6px;align-items:center;justify-content:center}
+  #gt-panel{position:fixed;right:18px;bottom:18px;width:440px;max-height:80vh;overflow:auto;background:rgba(0,0,0,.88);
+    border:1px solid var(--gt-border);border-radius:14px;color:var(--gt-text);z-index:99997;display:none}
+  #gt-panel header{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--gt-border)}
   #gt-tabs{display:flex;gap:6px;padding:8px 10px}
-  .gt-tab{flex:1;padding:8px 10px;text-align:center;border:1px solid #6d5a2f;border-radius:8px;background:#201b16;cursor:pointer}
+  .gt-tab{flex:1;padding:8px 10px;text-align:center;border:1px solid var(--gt-border);border-radius:8px;background:#201b16;cursor:pointer}
   .gt-tab.active{background:#2a241d}
   .gt-sec{padding:10px 12px}
   .gt-field{margin-bottom:8px}
   .gt-field label{display:block;margin-bottom:4px;opacity:.9}
-  .gt-input,.gt-select,.gt-text{width:100%;padding:6px 8px;border-radius:8px;border:1px solid #6d5a2f;background:#161310;color:#f1e4c2}
+  .gt-input, .gt-select, .gt-text{width:100%;padding:6px 8px;border-radius:8px;border:1px solid var(--gt-border);background:#161310;color:var(--gt-text)}
   .gt-row{display:flex;gap:8px}
-  .gt-row>*{flex:1}
+  .gt-row > *{flex:1}
   .gt-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
   .gt-table{width:100%;border-collapse:collapse;margin-top:6px}
   .gt-table th,.gt-table td{border-bottom:1px solid #443722;padding:6px 4px;text-align:left}
   .gt-note{opacity:.75;font-size:12px}
   .gt-target{display:flex;align-items:center;justify-content:space-between;border:1px solid #443722;border-radius:8px;padding:6px;margin-top:6px}
+  canvas#gt-route{position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:9990}
   canvas#gt-minimap{width:100%;height:180px;background:#0f0c09;border:1px solid #3b2f18;border-radius:8px}
-  /* Ikona w stopce */
-  a#gt-menu-btn{font-weight:700}
-  /* Pływający przycisk (fallback) */
-  #gt-fab{position:fixed;left:14px;bottom:14px;width:46px;height:46px;border-radius:50%;background:#1f1b16;border:1px solid #6d5a2f;color:#ffd257;font-weight:800;display:flex;align-items:center;justify-content:center;z-index:2147483647;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.5)}
-  #gt-fab:hover{filter:brightness(1.12)}
+
+  /* Ikony */
+  #gt-menu-btn{
+    font-weight:700; position:relative; display:inline-flex; align-items:center; gap:6px;
+  }
+  #gt-menu-btn::before{
+    content:""; width:16px; height:16px; display:inline-block;
+    background:url("data:image/svg+xml,${ICON_SVG}") no-repeat center/contain; filter:drop-shadow(0 0 6px #ffd257aa);
+    animation:gt-pulse 2.2s ease-in-out infinite;
+  }
+  #gt-fab{
+    position:fixed; left:16px; bottom:16px; width:44px; height:44px; z-index:99998;
+    border-radius:50%; border:1px solid var(--gt-border); background:var(--gt-panel);
+    background-image:url("data:image/svg+xml,${ICON_SVG}");
+    background-size:70%; background-position:center; background-repeat:no-repeat;
+    box-shadow:0 12px 24px rgba(0,0,0,.45);
+    cursor:pointer;
+    animation:gt-glow 2.3s ease-in-out infinite;
+  }
+  #gt-fab:hover{ filter:brightness(1.1)}
+  @keyframes gt-pulse { 0%,100%{ transform:translateY(0) scale(1)} 50%{ transform:translateY(-1px) scale(1.05)} }
+  @keyframes gt-glow  { 0%,100%{ box-shadow:0 12px 24px rgba(255,210,87,.25)} 50%{ box-shadow:0 12px 32px rgba(255,210,87,.55)} }
+
+  /* Themes */
+  body.hs-theme-dark{--gt-bg:#0c0e12;--gt-panel:#10131a;--gt-accent:#7ed0ff;--gt-text:#e6f0ff;--gt-border:#2a3a53}
+  body.hs-theme-classic{--gt-bg:#171717;--gt-panel:#202020;--gt-accent:#f0f0f0;--gt-text:#f0f0f0;--gt-border:#3a3a3a}
   `);
 
   /***********************
@@ -57,44 +107,51 @@
     get(k, def){ try{ return JSON.parse(localStorage.getItem(k)) ?? def }catch{ return def }},
     set(k, v){ localStorage.setItem(k, JSON.stringify(v)) }
   };
-  function toast(msg){
-    const t=document.createElement('div'); t.className='gt-toast'; t.textContent=msg;
-    document.body.appendChild(t); setTimeout(()=>t.remove(),2200);
-  }
-  const SPEEDS = { colonize:0.20, fire:0.30, bireme:0.35, trireme:0.32, transport:0.25 };
-  const SettingsKey = 'gt_settings';
-  const TargetsKey  = 'gt_targets';
-  const LogKey      = 'gt_log';
+  function toast(msg){ const t=document.createElement('div'); t.className='gt-toast'; t.textContent=msg;
+    document.body.appendChild(t); setTimeout(()=>t.remove(),2200); }
 
   /***********************
-   *  PANEL
+   *  PANEL (single)
    ***********************/
   const panel = document.createElement('div');
   panel.id = 'gt-panel';
   panel.innerHTML = `
     <header>
-      <div><b>⚓ Grepolis Toolkit</b></div>
-      <div class="gt-btn" id="gt-close" style="padding:4px 8px">✖</div>
+      <div><b>Grepolis Toolkit</b></div>
+      <div class="gt-btn" id="gt-close" style="padding:4px 8px">X</div>
     </header>
     <div id="gt-tabs">
-      <div class="gt-tab active" data-tab="planner">⚔️ Planner</div>
-      <div class="gt-tab" data-tab="finder">🗺️ Finder</div>
-      <div class="gt-tab" data-tab="log">📜 Log</div>
-      <div class="gt-tab" data-tab="settings">⚙️ Settings</div>
+      <div class="gt-tab active" data-tab="planner">Planner</div>
+      <div class="gt-tab" data-tab="finder">Finder</div>
+      <div class="gt-tab" data-tab="log">Log</div>
+      <div class="gt-tab" data-tab="settings">Settings</div>
     </div>
 
     <!-- PLANNER -->
     <section class="gt-sec" id="gt-planner">
       <div class="gt-row">
-        <div class="gt-field"><label>Start town (name or ID)</label><input class="gt-input" id="gt-start" placeholder="e.g. Athens or 12345"></div>
-        <div class="gt-field"><label>World speed</label><input class="gt-input" id="gt-worldspeed" type="number" min="1" step="0.1" value="1"><small class="gt-note">Auto</small></div>
+        <div class="gt-field">
+          <label>Start town (name or ID)</label>
+          <input class="gt-input" id="gt-start" placeholder="e.g. Athens or 12345">
+        </div>
+        <div class="gt-field">
+          <label>World speed</label>
+          <input class="gt-input" id="gt-worldspeed" type="number" min="1" step="0.1" value="1">
+          <small class="gt-note">Auto-detected</small>
+        </div>
       </div>
+
       <div class="gt-row">
-        <div class="gt-field"><label><input type="checkbox" id="gt-b-poseidon"> Poseidon +10%</label></div>
-        <div class="gt-field"><label><input type="checkbox" id="gt-b-sails"> Sails +10%</label></div>
-        <div class="gt-field"><label><input type="checkbox" id="gt-b-captain"> Captain +10%</label></div>
+        <div class="gt-field"><label><input type="checkbox" id="gt-b-poseidon"> Poseidon (+10%)</label></div>
+        <div class="gt-field"><label><input type="checkbox" id="gt-b-sails"> Sails (+10%)</label></div>
+        <div class="gt-field"><label><input type="checkbox" id="gt-b-captain"> Captain (+10%)</label></div>
       </div>
-      <div class="gt-field"><label>Add target (name/ID or coords x|y)</label><input class="gt-input" id="gt-target" placeholder="Sparta or 54321 or 421|537"></div>
+
+      <div class="gt-field">
+        <label>Add target (name/ID or coords x|y)</label>
+        <input class="gt-input" id="gt-target" placeholder="e.g. Sparta or 54321 or 421|537">
+      </div>
+
       <div class="gt-row">
         <div class="gt-field">
           <label>Unit</label>
@@ -106,8 +163,12 @@
             <option value="transport">Transport</option>
           </select>
         </div>
-        <div class="gt-field"><label>Notify when ETA &lt; (min)</label><input class="gt-input" id="gt-notify-min" type="number" min="1" value="30"></div>
+        <div class="gt-field">
+          <label>Notify when ETA < (min)</label>
+          <input class="gt-input" id="gt-notify-min" type="number" min="1" value="30">
+        </div>
       </div>
+
       <div class="gt-actions">
         <div class="gt-btn" id="gt-add-target" style="padding:8px">Add target</div>
         <div class="gt-btn" id="gt-calc-all" style="padding:8px">Recalculate all</div>
@@ -115,6 +176,7 @@
         <div class="gt-btn" id="gt-export" style="padding:8px">Export JSON</div>
         <div class="gt-btn" id="gt-import" style="padding:8px">Import JSON</div>
       </div>
+
       <div id="gt-targets"></div>
       <div style="margin-top:10px"><canvas id="gt-minimap" width="440" height="180"></canvas></div>
     </section>
@@ -131,7 +193,10 @@
             <option value="ghosts_near">Ghosts near start</option>
           </select>
         </div>
-        <div class="gt-field"><label>Query (name or ID)</label><input class="gt-input" id="gt-fquery" placeholder="Player/Alliance"></div>
+        <div class="gt-field">
+          <label>Query (name or ID)</label>
+          <input class="gt-input" id="gt-fquery" placeholder="Player/Alliance">
+        </div>
       </div>
       <div class="gt-row">
         <div class="gt-field"><label><input type="checkbox" id="gt-only-ghosts"> Only ghost towns</label></div>
@@ -139,14 +204,17 @@
         <div class="gt-field"><label>Radius (ghosts near)</label><input class="gt-input" id="gt-radius" type="number" value="100"></div>
       </div>
       <div class="gt-row">
-        <div class="gt-field"><label>Points &lt; max</label><input class="gt-input" id="gt-maxpoints" type="number" placeholder="e.g. 2000"></div>
+        <div class="gt-field"><label>Points < max</label><input class="gt-input" id="gt-maxpoints" type="number" placeholder="e.g. 2000"></div>
         <div class="gt-field"><label>Filter name</label><input class="gt-input" id="gt-namefilter" placeholder="substring"></div>
       </div>
       <div class="gt-actions" style="margin-bottom:8px">
         <div class="gt-btn" id="gt-find" style="flex:2;padding:8px">Find</div>
         <div class="gt-btn" id="gt-clear" style="flex:1;padding:8px">Clear</div>
       </div>
-      <table class="gt-table" id="gt-table"><thead><tr><th>Town</th><th>Owner</th><th>Type</th><th>→ Planner</th></tr></thead><tbody></tbody></table>
+      <table class="gt-table" id="gt-table">
+        <thead><tr><th>Town</th><th>Owner</th><th>Type</th><th>→ Planner</th></tr></thead>
+        <tbody></tbody>
+      </table>
       <small class="gt-note">Player/Alliance use in-game models when available. Ghosts near uses your locally cached island scans.</small>
     </section>
 
@@ -175,76 +243,71 @@
   `;
   document.body.appendChild(panel);
 
-  const openPanel = () => { panel.style.display='block'; };
-  const closePanel= () => { panel.style.display='none'; };
+  const openPanel = () => { panel.style.display='block'; panel.style.opacity='0'; setTimeout(()=>panel.style.opacity='1', 25); };
+  const closePanel= () => { panel.style.opacity='0'; setTimeout(()=>panel.style.display='none', 160); };
   panel.querySelector('#gt-close').addEventListener('click', closePanel);
   panel.querySelectorAll('.gt-tab').forEach(t=> t.addEventListener('click', ()=>{
     panel.querySelectorAll('.gt-tab').forEach(x=>x.classList.remove('active'));
     t.classList.add('active');
     panel.querySelectorAll('.gt-sec').forEach(sec=> sec.style.display='none');
-    $('#gt-'+t.dataset.tab).style.display='block';
+    document.getElementById('gt-'+t.dataset.tab).style.display='block';
   }));
 
   /***********************
-   *  MENU ICON + FAB (robust)
+   *  ICON(S): footer link + fallback FAB
    ***********************/
-  function addMenuButton(){
-    if (document.getElementById('gt-menu-btn')) return;
-    const menu = document.querySelector('#ui_box ul#ui_footer_links') ||
-                 document.querySelector('#ui_box .menu_inner ul') ||
-                 document.querySelector('ul#ui_footer_links');
-    if (!menu) return;
+  function insertFooterIcon(){
+    const menu = document.querySelector('#ui_box ul#ui_footer_links');
+    if (!menu || document.getElementById('gt-menu-btn')) return;
     const li = document.createElement('li');
-    li.innerHTML = `<a id="gt-menu-btn" href="#" title="Grepolis Toolkit">GT</a>`;
-    li.addEventListener('click', e => { e.preventDefault(); openPanel(); });
+    li.innerHTML = `<a id="gt-menu-btn" href="#">Toolkit</a>`;
+    li.addEventListener('click', (e)=>{ e.preventDefault(); openPanel(); });
     menu.appendChild(li);
   }
-  // próbuj co 1s przez 10s
-  let tries=0; const menuTimer = setInterval(()=>{ addMenuButton(); if (++tries>10) clearInterval(menuTimer); }, 1000);
-  // mutation observer – gdy UI się przeładuje
-  const mo = new MutationObserver(()=> addMenuButton());
-  mo.observe(document.body, {childList:true, subtree:true});
-
-  // FAB fallback (zostaje nawet jeśli menu jest — możesz kliknąć który wolisz)
-  function ensureFAB(){
+  // Fallback FAB (widoczny, jeśli nie uda się doczepić do stopki po 3s)
+  let fabPlaced = false;
+  function placeFab(){
+    if (fabPlaced) return;
     if (document.getElementById('gt-fab')) return;
-    const fab = document.createElement('div');
-    fab.id = 'gt-fab';
-    fab.textContent = 'GT';
-    fab.title = 'Grepolis Toolkit (Alt+T)';
-    fab.addEventListener('click', ()=>{
+    const btn = document.createElement('div');
+    btn.id = 'gt-fab';
+    btn.title = 'Grepolis Toolkit (Alt+T)';
+    btn.addEventListener('click', ()=> {
       if (panel.style.display==='none' || panel.style.display==='') openPanel(); else closePanel();
     });
-    document.body.appendChild(fab);
+    document.body.appendChild(btn);
+    fabPlaced = true;
   }
-  ensureFAB();
+  const footerObs = new MutationObserver(insertFooterIcon);
+  footerObs.observe(document.body,{childList:true,subtree:true});
+  setTimeout(()=>{ insertFooterIcon(); if (!document.getElementById('gt-menu-btn')) placeFab(); }, 3000);
 
   // Hotkey Alt+T
   document.addEventListener('keydown', (e)=>{
     if (e.altKey && e.key.toLowerCase()==='t'){
-      e.preventDefault();
       if (panel.style.display==='none' || panel.style.display==='') openPanel(); else closePanel();
     }
   });
 
+  // startup toast
+  setTimeout(()=> toast('Grepolis Toolkit: loaded'), 1200);
+
   /***********************
-   *  LOG
+   *  GLOBAL STATE
    ***********************/
+  const SPEEDS = { colonize:0.20, fire:0.30, bireme:0.35, trireme:0.32, transport:0.25 };
+  const SettingsKey = 'gt_settings';
+  const TargetsKey  = 'gt_targets';
+  const LogKey      = 'gt_log';
+  let lastScannedTowns = [];
+  let targets = LS.get(TargetsKey, []);
   const logArr = LS.get(LogKey, []);
-  function escapeHtml(s){ return s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+
   function logPush(type, msg, meta){
     const row = {ts:Date.now(), type, msg, meta:meta||null};
     logArr.unshift(row);
     LS.set(LogKey, logArr.slice(0,200));
     renderLog(); updateStats();
-  }
-  function renderLog(){
-    const box = $('#gt-loglist'); if (!box) return;
-    if (!logArr.length){ box.innerHTML = '<div class="gt-note">Empty.</div>'; return; }
-    box.innerHTML = logArr.map(x=> `<div style="padding:6px 0;border-bottom:1px solid #443722">
-      <div><b>[${new Date(x.ts).toLocaleString()}]</b> ${x.type.toUpperCase()}: ${escapeHtml(x.msg)}</div>
-      ${x.meta? `<pre class="gt-text" style="white-space:pre-wrap;margin-top:4px">${escapeHtml(JSON.stringify(x.meta,null,2))}</pre>`:''}
-    </div>`).join('');
   }
   function updateStats(){
     const scans = logArr.filter(x=>x.type==='scan').length;
@@ -252,11 +315,18 @@
     const exports = logArr.filter(x=>x.type==='export').length;
     $('#gt-stats').textContent = `Scans: ${scans} • Calcs: ${calcs} • Exports: ${exports}`;
   }
-  $('#gt-log-clear').addEventListener('click', ()=>{ LS.set(LogKey, []); logArr.length=0; renderLog(); updateStats(); });
-  $('#gt-log-copy').addEventListener('click', ()=>{ navigator.clipboard.writeText(JSON.stringify(logArr,null,2)); toast('Log copied'); });
+  function renderLog(){
+    const box = $('#gt-loglist'); if (!box) return;
+    if (!logArr.length){ box.innerHTML = '<div class="gt-note">Empty.</div>'; return; }
+    box.innerHTML = logArr.map(x=> `<div style="padding:6px 0;border-bottom:1px solid #443722">
+      <div><b>[${new Date(x.ts).toLocaleString()}]</b> ${x.type.toUpperCase()}: ${x.msg}</div>
+      ${x.meta? `<pre class="gt-text" style="white-space:pre-wrap;margin-top:4px">${escapeHtml(JSON.stringify(x.meta,null,2))}</pre>`:''}
+    </div>`).join('');
+  }
+  function escapeHtml(s){ return s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
 
   /***********************
-   *  TOWNS / WORLD SPEED
+   *  DATA: TOWNS / UX
    ***********************/
   function getMyTowns(){
     try{
@@ -274,7 +344,9 @@
     }catch(e){ return []; }
   }
   const dedupe = arr => { const m=new Map(); arr.forEach(x=> m.set((x.id||x.name)+'', x)); return Array.from(m.values()); };
+  const allTargets = () => dedupe(getMyTowns().concat(lastScannedTowns));
 
+  // auto world speed
   (function autoWorldSpeed(){
     try{
       const ws = window.Game?.game_speed || window.Game?.world_speed || 1;
@@ -283,18 +355,20 @@
   })();
 
   /***********************
-   *  PARSE / ETA / ROUTE
+   *  PLANNER / ROUTES
    ***********************/
-  function parseTownToken(token, pool){
+  function colorForUnit(u){
+    return {colonize:'#ffd200', fire:'#ff0033', bireme:'#ffffff', trireme:'#2a7cff', transport:'#8d6b3a'}[u] || '#ffd200';
+  }
+  function parseTownToken(token){
     if (!token) return null;
-    const all = pool || dedupe(getMyTowns().concat(lastScannedTowns));
     const idMatch = (token.match(/#(\d+)/)||token.match(/^(\d+)$/)||[])[1];
     if (idMatch){
-      const t = all.find(x=>(''+x.id)===idMatch) || getMyTowns().find(x=>(''+x.id)===idMatch);
+      const t = allTargets().find(x=>(''+x.id)===idMatch) || getMyTowns().find(x=>(''+x.id)===idMatch);
       if (t) return t; return {id:+idMatch, name:`#${idMatch}`};
     }
     const xy = (token.match(/(\d+)\s*\|\s*(\d+)/)||[]);
-    const byName = all.find(x=>(x.name||'').toLowerCase()===token.toLowerCase()) || getMyTowns().find(x=>(x.name||'').toLowerCase()===token.toLowerCase());
+    const byName = allTargets().find(x=>(x.name||'').toLowerCase()===token.toLowerCase()) || getMyTowns().find(x=>(x.name||'').toLowerCase()===token.toLowerCase());
     if (byName) return byName;
     if (xy[1]) return {id:null,name:token,x:+xy[1],y:+xy[2]};
     return null;
@@ -310,23 +384,22 @@
   const hms = secs => { const h=Math.floor(secs/3600), m=Math.floor((secs%3600)/60), s=secs%60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; };
 
   // route overlay
-  const routeCanvas = document.createElement('canvas'); routeCanvas.id='gt-route'; routeCanvas.style.cssText='position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:2147483644';
-  document.body.appendChild(routeCanvas);
-  function syncCanvas(){ routeCanvas.width=innerWidth; routeCanvas.height=innerHeight; }
-  window.addEventListener('resize', syncCanvas); syncCanvas();
-  const mapToScreen = p => ({ x: (p.x/1000)*routeCanvas.width, y: (p.y/1000)*routeCanvas.height });
+  const canvas = document.createElement('canvas'); canvas.id='gt-route'; document.body.appendChild(canvas);
+  function syncCanvasSize(){ canvas.width=innerWidth; canvas.height=innerHeight; }
+  window.addEventListener('resize', syncCanvasSize); syncCanvasSize();
+  const mapToScreen = p => ({ x: (p.x/1000)*canvas.width, y: (p.y/1000)*canvas.height });
   let anim;
-  function colorForUnit(u){ return ({colonize:'#ffd200',fire:'#ff0033',bireme:'#ffffff',trireme:'#2a7cff',transport:'#8d6b3a'}[u]||'#ffd200'); }
   function drawRoute(from,to,unit){
-    const ctx = routeCanvas.getContext('2d');
-    ctx.clearRect(0,0,routeCanvas.width,routeCanvas.height);
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
     if (!from || !to || from.x==null || to.x==null) return;
-    const a=mapToScreen(from), b=mapToScreen(to), col=colorForUnit(unit);
+    const a=mapToScreen(from), b=mapToScreen(to);
+    const col = colorForUnit(unit);
     ctx.lineWidth=3; ctx.strokeStyle=col; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
     let t=0;
     const dot = ()=>{
       t=(t+0.01)%1; const x=a.x+(b.x-a.x)*t, y=a.y+(b.y-a.y)*t;
-      ctx.clearRect(0,0,routeCanvas.width,routeCanvas.height);
+      ctx.clearRect(0,0,canvas.width,canvas.height);
       ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
       ctx.fillStyle=col; ctx.beginPath(); ctx.arc(x,y,5,0,Math.PI*2); ctx.fill();
       anim=requestAnimationFrame(dot);
@@ -335,11 +408,6 @@
     anim=requestAnimationFrame(dot);
   }
 
-  /***********************
-   *  PLANNER state
-   ***********************/
-  let lastScannedTowns = [];
-  let targets = LS.get(TargetsKey, []); // [{token, unit, x,y,id,name,owner}]
   function saveTargets(){ LS.set(TargetsKey, targets); renderTargets(); }
   function removeTarget(i){ targets.splice(i,1); saveTargets(); }
   function renderTargets(){
@@ -402,7 +470,8 @@
       const r = calcETA(from,t,t.unit,ws,buffs);
       logPush('calc', `ETA ${t.name}: ${hms(r.seconds)} (${r.eta.toLocaleString()})`, {start:$('#gt-start').value, target:t, res:r});
     });
-    renderTargets(); toast('Recalculated');
+    renderTargets();
+    toast('Recalculated');
   });
   $('#gt-bbcode-all').addEventListener('click', ()=>{
     const from = $('#gt-start').value;
@@ -420,9 +489,10 @@ ${rows}
 [/table]`;
     navigator.clipboard.writeText(bb).then(()=>{ toast('BBCode copied'); logPush('export','BBCode (all) copied',{count:targets.length}); });
   });
+
   // Export/Import
   $('#gt-export').addEventListener('click', ()=>{
-    const data = { version:'0.9.6', start:$('#gt-start').value, ws:+$('#gt-worldspeed').value||1,
+    const data = { version:'0.9.5', start:$('#gt-start').value, ws:+$('#gt-worldspeed').value||1,
       buffs:{poseidon:$('#gt-b-poseidon').checked, sails:$('#gt-b-sails').checked, captain:$('#gt-b-captain').checked}, targets };
     navigator.clipboard.writeText(JSON.stringify(data)).then(()=>{ toast('JSON copied'); logPush('export','JSON copied',data); });
   });
@@ -451,7 +521,7 @@ ${rows}
     if (from && from.x!=null){ const a=map(from); ctx.fillStyle='#00e676'; ctx.beginPath(); ctx.arc(a.x,a.y,4,0,Math.PI*2); ctx.fill(); }
     targets.forEach(t=>{ if (t.x==null) return; const b=map(t); const col = colorForUnit(t.unit); ctx.fillStyle=col; ctx.beginPath(); ctx.arc(b.x,b.y,3,0,Math.PI*2); ctx.fill(); });
   }
-  setInterval(()=>{ try{ drawMinimap(); }catch(_){/*noop*/} }, 1000);
+  setInterval(drawMinimap, 1000);
 
   // ETA notifications
   setInterval(()=>{
@@ -466,7 +536,7 @@ ${rows}
   }, 15000);
 
   /***********************
-   *  FINDER
+   *  FINDER (GLOBAL)
    ***********************/
   const tbody = $('#gt-table tbody');
   function pushRow(city){
@@ -495,6 +565,8 @@ ${rows}
     toast(found?`Found ${found} towns on island`:'Open island panel and try again');
     logPush('scan', `Island scan: ${found} towns`, {found});
   }
+
+  // frontend_bridge best effort
   function fbCall(model_url, args){
     return new Promise((resolve)=>{
       try{
@@ -542,11 +614,13 @@ ${rows}
     return pool.filter(t=> (!t.owner || t.owner==='-' || /ghost/i.test(t.owner)) && t.x!=null && Math.hypot(t.x-start.x, t.y-start.y)<=r)
                .map(t=> ({...t, type:'Ghost'}));
   }
+
   function applyFilters(rows){
     const onlyGhosts = $('#gt-only-ghosts').checked;
     const exAllies  = $('#gt-exclude-allies').checked;
     const maxp = +$('#gt-maxpoints').value || null;
     const namef = $('#gt-namefilter').value.trim().toLowerCase();
+
     let filtered = rows;
     if (onlyGhosts) filtered = filtered.filter(x=> !x.owner || x.owner==='-' || /ghost/i.test(x.owner) || x.type==='Ghost');
     if (exAllies && window.Game?.alliance_id){ filtered = filtered.filter(x=> (x.alliance_id||0) !== Game.alliance_id); }
@@ -554,6 +628,7 @@ ${rows}
     if (namef) filtered = filtered.filter(x=> (x.name||'').toLowerCase().includes(namef));
     return filtered;
   }
+
   async function runFinder(){
     tbody.innerHTML = '';
     const mode = $('#gt-fmode').value;
@@ -590,7 +665,7 @@ ${rows}
   });
 
   /***********************
-   *  SETTINGS / THEME
+   *  SETTINGS / THEMES
    ***********************/
   (function restoreSettings(){
     const s = LS.get(SettingsKey, {});
@@ -613,15 +688,11 @@ ${rows}
     document.body.classList.remove("hs-theme-goldblack","hs-theme-dark","hs-theme-classic");
     const t=$('#gt-theme').value; document.body.classList.add('hs-theme-'+t); saveSettings();
   });
-  GM_addStyle(`
-  body.hs-theme-goldblack{--hs-bg:#1d1a15;--hs-panel:#1f1b16;--hs-accent:#ffd257;--hs-text:#f1e4c2;--hs-border:#6d5a2f;background:#0f0e0c;}
-  body.hs-theme-dark{--hs-bg:#0c0e12;--hs-panel:#10131a;--hs-accent:#7ed0ff;--hs-text:#e6f0ff;--hs-border:#2a3a53;background:#080a0f;}
-  body.hs-theme-classic{--hs-bg:#171717;--hs-panel:#202020;--hs-accent:#f0f0f0;--hs-text:#f0f0f0;--hs-border:#3a3a3a;background:#121212;}
-  `);
 
   /***********************
    *  INIT
    ***********************/
-  renderTargets(); renderLog(); updateStats();
-  setTimeout(()=> toast('✅ Grepolis Toolkit v0.9.6 loaded'), 800);
+  function renderAll(){ renderTargets(); renderLog(); updateStats(); }
+  renderAll();
+  setInterval(drawMinimap, 1000);
 })();

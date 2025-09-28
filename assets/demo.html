@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Grepolis Toolkit Logo Demo</title>
+<style>
+body {
+  background: #111;
+  color: #ffd257;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  height: 100vh;
+}
+
+.logo {
+  width: 120px;
+  height: 120px;
+  fill: #ffd257;
+}
+
+/* 🔵 1. Puls */
+.pulse {
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%   { transform: scale(1);     filter: drop-shadow(0 0 0px #ffd257); }
+  50%  { transform: scale(1.1);   filter: drop-shadow(0 0 12px #ffd257); }
+  100% { transform: scale(1);     filter: drop-shadow(0 0 0px #ffd257); }
+}
+
+/* 🔵 2. Spin */
+.spin {
+  animation: spin 6s linear infinite;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* 🔵 3. Glow */
+.glow {
+  animation: glow 3s ease-in-out infinite;
+}
+@keyframes glow {
+  0%, 100% { filter: drop-shadow(0 0 0px #ffd257); }
+  50%      { filter: drop-shadow(0 0 20px #ffd257); }
+}
+</style>
+</head>
+<body>
+
+<!-- Puls -->
+<svg class="logo pulse" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <path d="M32 2c-2 0-4 2-4 4s2 4 4 4 4-2 4-4-2-4-4-4zm0 8c-2 0-4 2-4 4v26h-6v-6c0-2-2-4-4-4s-4 2-4 4 2 4 4 4h2v8h-6c-2 0-4 2-4 4s2 4 4 4h6v4c0 6 4 12 12 12s12-6 12-12v-4h6c2 0 4-2 4-4s-2-4-4-4h-6v-8h2c2 0 4-2 4-4s-2-4-4-4-4 2-4 4v6h-6V14c0-2-2-4-4-4z"/>
+</svg>
+
+<!-- Spin -->
+<svg class="logo spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <path d="M32 2c-2 0-4 2-4 4s2 4 4 4 4-2 4-4-2-4-4-4zm0 8c-2 0-4 2-4 4v26h-6v-6c0-2-2-4-4-4s-4 2-4 4 2 4 4 4h2v8h-6c-2 0-4 2-4 4s2 4 4 4h6v4c0 6 4 12 12 12s12-6 12-12v-4h6c2 0 4-2 4-4s-2-4-4-4h-6v-8h2c2 0 4-2 4-4s-2-4-4-4-4 2-4 4v6h-6V14c0-2-2-4-4-4z"/>
+</svg>
+
+<!-- Glow -->
+<svg class="logo glow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <path d="M32 2c-2 0-4 2-4 4s2 4 4 4 4-2 4-4-2-4-4-4zm0 8c-2 0-4 2-4 4v26h-6v-6c0-2-2-4-4-4s-4 2-4 4 2 4 4 4h2v8h-6c-2 0-4 2-4 4s2 4 4 4h6v4c0 6 4 12 12 12s12-6 12-12v-4h6c2 0 4-2 4-4s-2-4-4-4h-6v-8h2c2 0 4-2 4-4s-2-4-4-4-4 2-4 4v6h-6V14c0-2-2-4-4-4z"/>
+</svg>
+
+</body>
+</html>
