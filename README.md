@@ -16,3 +16,12 @@ Dodatek do Grepolis (Tampermonkey), ktĂłry pozwala:
 - v0.3 â€“ raport nieaktywnych graczy
 - v0.4 â€“ ghost towny
 - v0.5 â€“ symulator kolonizatora
+
+## Features
+- Toolkit panel (Nieaktywni, Ghost Towny, Symulator)
+- Animowane trasy statkĂłw na mapie
+
+
+## Logo
+![Toolkit Logo](assets/logo.svg)
+
