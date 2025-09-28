@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Grepolis Toolkit
 // @namespace    https://github.com/KID6767/grepolis-toolkit
-// @version      0.9.5
-// @description  Planner (ETA, multi-target, BBCode), Finder (island/player/alliance/ghosts), log, minimap, hotkeys, animated icon
+// @version      1.0.0
+// @description  Planner (ETA, multi-target, BBCode, minimap, notifications) + Finder (island/player/alliance/ghosts) + Log + Settings + animated logo
 // @author       KID6767
 // @match        https://*.grepolis.com/*
 // @match        http://*.grepolis.com/*
@@ -15,111 +15,90 @@
 (function () {
   'use strict';
 
-  /***********************
-   *  EMBED ICON (SVG)
-   ***********************/
-  // Lekki złoty „trójząb/maszt” z poświatą. Wersja data:svg – zero zewnętrznych plików.
-  const ICON_SVG = encodeURIComponent(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-      <defs>
-        <filter id="glow">
-          <feGaussianBlur stdDeviation="2" result="b"/>
-          <feMerge>
-            <feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/>
-          </feMerge>
-        </filter>
-      </defs>
-      <g fill="#ffd257" filter="url(#glow)">
-        <circle cx="32" cy="8" r="3"/>
-        <rect x="29" y="10" width="6" height="22" rx="3"/>
-        <rect x="14" y="28" width="36" height="10" rx="5"/>
-        <rect x="12" y="24" width="6"  height="10" rx="3"/>
-        <rect x="46" y="24" width="6"  height="10" rx="3"/>
-        <rect x="22" y="38" width="20" height="10" rx="5"/>
-      </g>
-    </svg>
-  `);
+  /**********************
+   *  UTIL / STYLES
+   **********************/
+  const $  = (s, r=document) => r.querySelector(s);
+  const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+  const LS = {
+    get(k, d){ try{ return JSON.parse(localStorage.getItem(k)) ?? d }catch{ return d } },
+    set(k, v){ localStorage.setItem(k, JSON.stringify(v)) }
+  };
+  const KEYS = {settings:'gt_settings', targets:'gt_targets', log:'gt_log', cache:'gt_cache'};
 
-  /***********************
-   *  STYLES
-   ***********************/
   GM_addStyle(`
-  :root{
-    --gt-bg:#1d1a15; --gt-panel:#1f1b16; --gt-accent:#ffd257;
-    --gt-text:#f1e4c2; --gt-border:#6d5a2f;
-  }
-  .gt-toast{position:fixed;right:18px;bottom:18px;background:rgba(20,18,15,.96);color:var(--gt-text);
-    border:1px solid var(--gt-border);padding:10px 12px;border-radius:10px;z-index:999999;box-shadow:0 10px 24px rgba(0,0,0,.5)}
-  .gt-btn{cursor:pointer;border-radius:8px;border:1px solid var(--gt-border);background:var(--gt-panel);color:var(--gt-accent);
-    font-weight:700;display:inline-flex;gap:6px;align-items:center;justify-content:center}
-  #gt-panel{position:fixed;right:18px;bottom:18px;width:440px;max-height:80vh;overflow:auto;background:rgba(0,0,0,.88);
-    border:1px solid var(--gt-border);border-radius:14px;color:var(--gt-text);z-index:99997;display:none}
-  #gt-panel header{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--gt-border)}
+  .gt-toast{position:fixed;right:18px;bottom:18px;background:rgba(20,18,15,.96);color:#f7e3b1;border:1px solid #6d5a2f;padding:10px 12px;border-radius:10px;z-index:999999;box-shadow:0 10px 24px rgba(0,0,0,.5)}
+  .gt-btn{cursor:pointer;border-radius:8px;border:1px solid #6d5a2f;background:#1f1b16;color:#ffd257;font-weight:700;display:inline-flex;gap:6px;align-items:center;justify-content:center;user-select:none}
+  #gt-panel{position:fixed;right:18px;bottom:18px;width:460px;max-height:80vh;overflow:auto;background:rgba(0,0,0,.88);border:1px solid #6d5a2f;border-radius:14px;color:#f1e4c2;z-index:99997;display:none}
+  #gt-panel header{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:1px solid #6d5a2f}
   #gt-tabs{display:flex;gap:6px;padding:8px 10px}
-  .gt-tab{flex:1;padding:8px 10px;text-align:center;border:1px solid var(--gt-border);border-radius:8px;background:#201b16;cursor:pointer}
+  .gt-tab{flex:1;padding:8px 10px;text-align:center;border:1px solid #6d5a2f;border-radius:8px;background:#201b16;cursor:pointer}
   .gt-tab.active{background:#2a241d}
   .gt-sec{padding:10px 12px}
   .gt-field{margin-bottom:8px}
   .gt-field label{display:block;margin-bottom:4px;opacity:.9}
-  .gt-input, .gt-select, .gt-text{width:100%;padding:6px 8px;border-radius:8px;border:1px solid var(--gt-border);background:#161310;color:var(--gt-text)}
-  .gt-row{display:flex;gap:8px}
-  .gt-row > *{flex:1}
+  .gt-input,.gt-select,.gt-text{width:100%;padding:6px 8px;border-radius:8px;border:1px solid #6d5a2f;background:#161310;color:#f1e4c2}
+  .gt-row{display:flex;gap:8px}.gt-row>*{flex:1}
   .gt-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
   .gt-table{width:100%;border-collapse:collapse;margin-top:6px}
   .gt-table th,.gt-table td{border-bottom:1px solid #443722;padding:6px 4px;text-align:left}
   .gt-note{opacity:.75;font-size:12px}
   .gt-target{display:flex;align-items:center;justify-content:space-between;border:1px solid #443722;border-radius:8px;padding:6px;margin-top:6px}
-  canvas#gt-route{position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:9990}
+  canvas#gt-route{position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:99990}
   canvas#gt-minimap{width:100%;height:180px;background:#0f0c09;border:1px solid #3b2f18;border-radius:8px}
-
-  /* Ikony */
-  #gt-menu-btn{
-    font-weight:700; position:relative; display:inline-flex; align-items:center; gap:6px;
-  }
-  #gt-menu-btn::before{
-    content:""; width:16px; height:16px; display:inline-block;
-    background:url("data:image/svg+xml,${ICON_SVG}") no-repeat center/contain; filter:drop-shadow(0 0 6px #ffd257aa);
-    animation:gt-pulse 2.2s ease-in-out infinite;
-  }
-  #gt-fab{
-    position:fixed; left:16px; bottom:16px; width:44px; height:44px; z-index:99998;
-    border-radius:50%; border:1px solid var(--gt-border); background:var(--gt-panel);
-    background-image:url("data:image/svg+xml,${ICON_SVG}");
-    background-size:70%; background-position:center; background-repeat:no-repeat;
-    box-shadow:0 12px 24px rgba(0,0,0,.45);
-    cursor:pointer;
-    animation:gt-glow 2.3s ease-in-out infinite;
-  }
-  #gt-fab:hover{ filter:brightness(1.1)}
-  @keyframes gt-pulse { 0%,100%{ transform:translateY(0) scale(1)} 50%{ transform:translateY(-1px) scale(1.05)} }
-  @keyframes gt-glow  { 0%,100%{ box-shadow:0 12px 24px rgba(255,210,87,.25)} 50%{ box-shadow:0 12px 32px rgba(255,210,87,.55)} }
-
-  /* Themes */
-  body.hs-theme-dark{--gt-bg:#0c0e12;--gt-panel:#10131a;--gt-accent:#7ed0ff;--gt-text:#e6f0ff;--gt-border:#2a3a53}
-  body.hs-theme-classic{--gt-bg:#171717;--gt-panel:#202020;--gt-accent:#f0f0f0;--gt-text:#f0f0f0;--gt-border:#3a3a3a}
+  #gt-menu-btn{font-weight:700}
+  .gt-logo{width:22px;height:22px;display:inline-block;vertical-align:middle}
   `);
 
-  /***********************
-   *  HELPERS / STORAGE
-   ***********************/
-  const $ = sel => document.querySelector(sel);
-  const LS = {
-    get(k, def){ try{ return JSON.parse(localStorage.getItem(k)) ?? def }catch{ return def }},
-    set(k, v){ localStorage.setItem(k, JSON.stringify(v)) }
-  };
-  function toast(msg){ const t=document.createElement('div'); t.className='gt-toast'; t.textContent=msg;
-    document.body.appendChild(t); setTimeout(()=>t.remove(),2200); }
+  const SPEEDS = { colonize:0.20, fire:0.30, bireme:0.35, trireme:0.32, transport:0.25 };
 
-  /***********************
+  const toast = (msg, ms=2200)=>{
+    const t=document.createElement('div'); t.className='gt-toast'; t.textContent=msg;
+    document.body.appendChild(t); setTimeout(()=>t.remove(),ms);
+  };
+  const escapeHtml = s => s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+
+  /**********************
+   *  INLINE LOGO (SVG)
+   **********************/
+  const GT_SVG = `
+    <svg viewBox="0 0 64 64" class="gt-logo" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="f" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="1.8" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <g fill="#ffd257" filter="url(#f)">
+        <rect x="28" y="10" width="8" height="28" rx="3"/>
+        <circle cx="32" cy="8" r="4"/>
+        <rect x="12" y="28" width="40" height="14" rx="6"/>
+        <rect x="18" y="24" width="6" height="10" rx="3"/>
+        <rect x="40" y="24" width="6" height="10" rx="3"/>
+        <path d="M24 42v6a6 6 0 0 0 6 6h4a6 6 0 0 0 6-6v-6z"/>
+      </g>
+    </svg>
+  `;
+  const logoNode = ()=> {
+    const d = document.createElement('span');
+    d.innerHTML = GT_SVG; return d.firstElementChild;
+  };
+
+  /**********************
    *  PANEL (single)
-   ***********************/
+   **********************/
   const panel = document.createElement('div');
   panel.id = 'gt-panel';
   panel.innerHTML = `
     <header>
-      <div><b>Grepolis Toolkit</b></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        ${GT_SVG}
+        <b>Grepolis Toolkit</b>
+        <canvas id="gt-logo-anim" width="28" height="28" style="margin-left:6px"></canvas>
+      </div>
       <div class="gt-btn" id="gt-close" style="padding:4px 8px">X</div>
     </header>
+
     <div id="gt-tabs">
       <div class="gt-tab active" data-tab="planner">Planner</div>
       <div class="gt-tab" data-tab="finder">Finder</div>
@@ -245,76 +224,74 @@
 
   const openPanel = () => { panel.style.display='block'; panel.style.opacity='0'; setTimeout(()=>panel.style.opacity='1', 25); };
   const closePanel= () => { panel.style.opacity='0'; setTimeout(()=>panel.style.display='none', 160); };
-  panel.querySelector('#gt-close').addEventListener('click', closePanel);
-  panel.querySelectorAll('.gt-tab').forEach(t=> t.addEventListener('click', ()=>{
-    panel.querySelectorAll('.gt-tab').forEach(x=>x.classList.remove('active'));
+  $('#gt-close').addEventListener('click', closePanel);
+  $$('#gt-tabs .gt-tab').forEach(t=> t.addEventListener('click', ()=>{
+    $$('#gt-tabs .gt-tab').forEach(x=>x.classList.remove('active'));
     t.classList.add('active');
-    panel.querySelectorAll('.gt-sec').forEach(sec=> sec.style.display='none');
-    document.getElementById('gt-'+t.dataset.tab).style.display='block';
+    $$('#gt-panel .gt-sec').forEach(sec=> sec.style.display='none');
+    $('#gt-'+t.dataset.tab).style.display='block';
   }));
 
-  /***********************
-   *  ICON(S): footer link + fallback FAB
-   ***********************/
-  function insertFooterIcon(){
+  /**********************
+   *  ICON in footer
+   **********************/
+  function insertMenuButton(){
     const menu = document.querySelector('#ui_box ul#ui_footer_links');
-    if (!menu || document.getElementById('gt-menu-btn')) return;
+    if (!menu || $('#gt-menu-btn')) return;
     const li = document.createElement('li');
-    li.innerHTML = `<a id="gt-menu-btn" href="#">Toolkit</a>`;
-    li.addEventListener('click', (e)=>{ e.preventDefault(); openPanel(); });
-    menu.appendChild(li);
+    const a = document.createElement('a');
+    a.id='gt-menu-btn'; a.href='#';
+    a.appendChild(logoNode());
+    a.appendChild(document.createTextNode(' Toolkit'));
+    a.addEventListener('click', e=>{ e.preventDefault(); openPanel(); });
+    li.appendChild(a); menu.appendChild(li);
   }
-  // Fallback FAB (widoczny, jeśli nie uda się doczepić do stopki po 3s)
-  let fabPlaced = false;
-  function placeFab(){
-    if (fabPlaced) return;
-    if (document.getElementById('gt-fab')) return;
-    const btn = document.createElement('div');
-    btn.id = 'gt-fab';
-    btn.title = 'Grepolis Toolkit (Alt+T)';
-    btn.addEventListener('click', ()=> {
-      if (panel.style.display==='none' || panel.style.display==='') openPanel(); else closePanel();
-    });
-    document.body.appendChild(btn);
-    fabPlaced = true;
-  }
-  const footerObs = new MutationObserver(insertFooterIcon);
-  footerObs.observe(document.body,{childList:true,subtree:true});
-  setTimeout(()=>{ insertFooterIcon(); if (!document.getElementById('gt-menu-btn')) placeFab(); }, 3000);
+  const menuObs = new MutationObserver(insertMenuButton);
+  menuObs.observe(document.body,{childList:true,subtree:true});
+  setTimeout(insertMenuButton, 1200);
 
   // Hotkey Alt+T
   document.addEventListener('keydown', (e)=>{
     if (e.altKey && e.key.toLowerCase()==='t'){
-      if (panel.style.display==='none' || panel.style.display==='') openPanel(); else closePanel();
+      (panel.style.display==='none' || !panel.style.display) ? openPanel() : closePanel();
     }
   });
 
-  // startup toast
-  setTimeout(()=> toast('Grepolis Toolkit: loaded'), 1200);
+  // Startup toast
+  setTimeout(()=> toast('Grepolis Toolkit: loaded'), 900);
 
-  /***********************
+  /**********************
+   *  LOGO ANIMATION (tiny)
+   **********************/
+  (function logoAnim(){
+    const c = $('#gt-logo-anim'); if (!c) return;
+    const ctx = c.getContext('2d'); let t=0;
+    function draw(){
+      const w=c.width, h=c.height; t+=0.05;
+      ctx.clearRect(0,0,w,h);
+      ctx.globalAlpha=0.25+0.25*Math.sin(t);
+      ctx.fillStyle='#ffd257';
+      ctx.beginPath(); ctx.arc(w/2, h/2, 10+2*Math.sin(t*2), 0, Math.PI*2); ctx.fill();
+      ctx.globalAlpha=1;
+      requestAnimationFrame(draw);
+    }
+    draw();
+  })();
+
+  /**********************
    *  GLOBAL STATE
-   ***********************/
-  const SPEEDS = { colonize:0.20, fire:0.30, bireme:0.35, trireme:0.32, transport:0.25 };
-  const SettingsKey = 'gt_settings';
-  const TargetsKey  = 'gt_targets';
-  const LogKey      = 'gt_log';
-  let lastScannedTowns = [];
-  let targets = LS.get(TargetsKey, []);
-  const logArr = LS.get(LogKey, []);
+   **********************/
+  let targets = LS.get(KEYS.targets, []);
+  let logArr  = LS.get(KEYS.log, []);
+  let lastScannedTowns = LS.get(KEYS.cache, []);
 
-  function logPush(type, msg, meta){
+  const logPush = (type, msg, meta)=>{
     const row = {ts:Date.now(), type, msg, meta:meta||null};
     logArr.unshift(row);
-    LS.set(LogKey, logArr.slice(0,200));
+    logArr = logArr.slice(0,250);
+    LS.set(KEYS.log, logArr);
     renderLog(); updateStats();
-  }
-  function updateStats(){
-    const scans = logArr.filter(x=>x.type==='scan').length;
-    const calcs = logArr.filter(x=>x.type==='calc').length;
-    const exports = logArr.filter(x=>x.type==='export').length;
-    $('#gt-stats').textContent = `Scans: ${scans} • Calcs: ${calcs} • Exports: ${exports}`;
-  }
+  };
   function renderLog(){
     const box = $('#gt-loglist'); if (!box) return;
     if (!logArr.length){ box.innerHTML = '<div class="gt-note">Empty.</div>'; return; }
@@ -323,11 +300,18 @@
       ${x.meta? `<pre class="gt-text" style="white-space:pre-wrap;margin-top:4px">${escapeHtml(JSON.stringify(x.meta,null,2))}</pre>`:''}
     </div>`).join('');
   }
-  function escapeHtml(s){ return s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+  const updateStats = ()=>{
+    const scans   = logArr.filter(x=>x.type==='scan').length;
+    const calcs   = logArr.filter(x=>x.type==='calc').length;
+    const exports = logArr.filter(x=>x.type==='export').length;
+    $('#gt-stats').textContent = `Scans: ${scans} • Calcs: ${calcs} • Exports: ${exports}`;
+  };
+  $('#gt-log-clear').addEventListener('click', ()=>{ LS.set(KEYS.log, []); logArr=[]; renderLog(); updateStats(); });
+  $('#gt-log-copy').addEventListener('click', ()=>{ navigator.clipboard.writeText(JSON.stringify(logArr,null,2)); toast('Log copied'); });
 
-  /***********************
-   *  DATA: TOWNS / UX
-   ***********************/
+  /**********************
+   *  DATA (my towns)
+   **********************/
   function getMyTowns(){
     try{
       const list = [];
@@ -354,12 +338,11 @@
     }catch(_){}
   })();
 
-  /***********************
+  /**********************
    *  PLANNER / ROUTES
-   ***********************/
-  function colorForUnit(u){
-    return {colonize:'#ffd200', fire:'#ff0033', bireme:'#ffffff', trireme:'#2a7cff', transport:'#8d6b3a'}[u] || '#ffd200';
-  }
+   **********************/
+  const colorForUnit = u => ({colonize:'#ffd200', fire:'#ff0033', bireme:'#ffffff', trireme:'#2a7cff', transport:'#8d6b3a'}[u] || '#ffd200');
+
   function parseTownToken(token){
     if (!token) return null;
     const idMatch = (token.match(/#(\d+)/)||token.match(/^(\d+)$/)||[])[1];
@@ -383,7 +366,7 @@
   }
   const hms = secs => { const h=Math.floor(secs/3600), m=Math.floor((secs%3600)/60), s=secs%60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; };
 
-  // route overlay
+  // overlay route
   const canvas = document.createElement('canvas'); canvas.id='gt-route'; document.body.appendChild(canvas);
   function syncCanvasSize(){ canvas.width=innerWidth; canvas.height=innerHeight; }
   window.addEventListener('resize', syncCanvasSize); syncCanvasSize();
@@ -408,7 +391,7 @@
     anim=requestAnimationFrame(dot);
   }
 
-  function saveTargets(){ LS.set(TargetsKey, targets); renderTargets(); }
+  function saveTargets(){ LS.set(KEYS.targets, targets); renderTargets(); }
   function removeTarget(i){ targets.splice(i,1); saveTargets(); }
   function renderTargets(){
     const box = $('#gt-targets'); if (!box) return;
@@ -476,7 +459,7 @@
   $('#gt-bbcode-all').addEventListener('click', ()=>{
     const from = $('#gt-start').value;
     const ws=+$('#gt-worldspeed').value||1;
-    const buffs=['poseidon','sails','captain'].filter(k=>$('#gt-b-'+k).checked).map(k=>({poseidon:'Poseidon',sails:'Sails',captain:'Captain'})[k]).join(', ')||'none';
+    const buffs=['poseidon','sails','captain'].map(k=>$('#gt-b-'+k).checked?({poseidon:'Poseidon',sails:'Sails',captain:'Captain'})[k]:null).filter(Boolean).join(', ')||'none';
     const rows = targets.map(t=>{
       const tt = (t.name||t.token) + (t.id?` #${t.id}`:'') + (t.x!=null?` (${t.x}|${t.y})`:``);
       return `[tr][td]${tt}[/td][td]${t.unit}[/td][/tr]`;
@@ -489,10 +472,8 @@ ${rows}
 [/table]`;
     navigator.clipboard.writeText(bb).then(()=>{ toast('BBCode copied'); logPush('export','BBCode (all) copied',{count:targets.length}); });
   });
-
-  // Export/Import
   $('#gt-export').addEventListener('click', ()=>{
-    const data = { version:'0.9.5', start:$('#gt-start').value, ws:+$('#gt-worldspeed').value||1,
+    const data = { version:'1.0.0', start:$('#gt-start').value, ws:+$('#gt-worldspeed').value||1,
       buffs:{poseidon:$('#gt-b-poseidon').checked, sails:$('#gt-b-sails').checked, captain:$('#gt-b-captain').checked}, targets };
     navigator.clipboard.writeText(JSON.stringify(data)).then(()=>{ toast('JSON copied'); logPush('export','JSON copied',data); });
   });
@@ -535,9 +516,9 @@ ${rows}
     }
   }, 15000);
 
-  /***********************
-   *  FINDER (GLOBAL)
-   ***********************/
+  /**********************
+   *  FINDER
+   **********************/
   const tbody = $('#gt-table tbody');
   function pushRow(city){
     const tr=document.createElement('tr');
@@ -547,6 +528,7 @@ ${rows}
                     <td><span class="gt-btn" style="padding:2px 6px" data-fill="${(city.name||'')}${city.id?` #${city.id}`:''}">Use</span></td>`;
     tbody.appendChild(tr);
   }
+
   function scanVisibleIsland(){
     tbody.innerHTML=''; let found=0; const uniq=new Set(); const rows=[];
     const nodes = Array.from(document.querySelectorAll('.island_view .town_name, .island_town_name, .town_name_link, .island_info .towns li'));
@@ -562,11 +544,12 @@ ${rows}
     }
     rows.forEach(c=>{ pushRow(c); found++; });
     lastScannedTowns = dedupe(lastScannedTowns.concat(rows));
+    LS.set(KEYS.cache, lastScannedTowns);
     toast(found?`Found ${found} towns on island`:'Open island panel and try again');
     logPush('scan', `Island scan: ${found} towns`, {found});
   }
 
-  // frontend_bridge best effort
+  // in-game frontend_bridge (best effort)
   function fbCall(model_url, args){
     return new Promise((resolve)=>{
       try{
@@ -614,13 +597,11 @@ ${rows}
     return pool.filter(t=> (!t.owner || t.owner==='-' || /ghost/i.test(t.owner)) && t.x!=null && Math.hypot(t.x-start.x, t.y-start.y)<=r)
                .map(t=> ({...t, type:'Ghost'}));
   }
-
   function applyFilters(rows){
     const onlyGhosts = $('#gt-only-ghosts').checked;
     const exAllies  = $('#gt-exclude-allies').checked;
     const maxp = +$('#gt-maxpoints').value || null;
     const namef = $('#gt-namefilter').value.trim().toLowerCase();
-
     let filtered = rows;
     if (onlyGhosts) filtered = filtered.filter(x=> !x.owner || x.owner==='-' || /ghost/i.test(x.owner) || x.type==='Ghost');
     if (exAllies && window.Game?.alliance_id){ filtered = filtered.filter(x=> (x.alliance_id||0) !== Game.alliance_id); }
@@ -628,13 +609,11 @@ ${rows}
     if (namef) filtered = filtered.filter(x=> (x.name||'').toLowerCase().includes(namef));
     return filtered;
   }
-
   async function runFinder(){
     tbody.innerHTML = '';
     const mode = $('#gt-fmode').value;
     const q = $('#gt-fquery').value.trim();
     let rows = [];
-
     if (mode==='island'){ scanVisibleIsland(); return; }
     if (mode==='player'){
       const player = /^\d+$/.test(q) ? {id:+q, name:`#${q}`} : await findPlayerByNameOrId(q);
@@ -653,6 +632,7 @@ ${rows}
     const out = Array.from(uniq.values());
     out.forEach(pushRow);
     lastScannedTowns = dedupe(lastScannedTowns.concat(out));
+    LS.set(KEYS.cache, lastScannedTowns);
     toast(`Found ${out.length} towns`);
     logPush('scan', `Finder ${mode}: ${out.length} results`, {mode,q,count:out.length});
   }
@@ -661,21 +641,22 @@ ${rows}
   tbody.addEventListener('click', (e)=>{
     const btn = e.target.closest('[data-fill]'); if (!btn) return;
     const token = btn.getAttribute('data-fill');
-    $('#gt-target').value = token; toast('Target filled'); panel.querySelector('[data-tab="planner"]').click();
+    $('#gt-target').value = token; toast('Target filled');
+    $$('#gt-tabs .gt-tab').find(x=>x.dataset.tab==='planner').click();
   });
 
-  /***********************
+  /**********************
    *  SETTINGS / THEMES
-   ***********************/
+   **********************/
   (function restoreSettings(){
-    const s = LS.get(SettingsKey, {});
+    const s = LS.get(KEYS.settings, {});
     if (s.unit) $('#gt-unit').value = s.unit;
     if (s.ws)   $('#gt-worldspeed').value = s.ws;
     ['poseidon','sails','captain'].forEach(k=>{ const el=$('#gt-b-'+k); if (el && s[k]!=null) el.checked = !!s[k]; });
     if (s.theme) { document.body.classList.add('hs-theme-'+s.theme); $('#gt-theme').value=s.theme; }
   })();
   function saveSettings(){
-    LS.set(SettingsKey,{
+    LS.set(KEYS.settings,{
       unit: $('#gt-unit').value,
       ws: +$('#gt-worldspeed').value || 1,
       poseidon: $('#gt-b-poseidon').checked,
@@ -688,11 +669,15 @@ ${rows}
     document.body.classList.remove("hs-theme-goldblack","hs-theme-dark","hs-theme-classic");
     const t=$('#gt-theme').value; document.body.classList.add('hs-theme-'+t); saveSettings();
   });
+  GM_addStyle(`
+  body.hs-theme-goldblack{--hs-bg:#1d1a15;--hs-panel:#1f1b16;--hs-accent:#ffd257;--hs-text:#f1e4c2;--hs-border:#6d5a2f;background:#0f0e0c;}
+  body.hs-theme-dark{--hs-bg:#0c0e12;--hs-panel:#10131a;--hs-accent:#7ed0ff;--hs-text:#e6f0ff;--hs-border:#2a3a53;background:#080a0f;}
+  body.hs-theme-classic{--hs-bg:#171717;--hs-panel:#202020;--hs-accent:#f0f0f0;--hs-text:#f0f0f0;--hs-border:#3a3a3a;background:#121212;}
+  `);
 
-  /***********************
+  /**********************
    *  INIT
-   ***********************/
-  function renderAll(){ renderTargets(); renderLog(); updateStats(); }
-  renderAll();
-  setInterval(drawMinimap, 1000);
+   **********************/
+  renderTargets(); renderLog(); updateStats(); setInterval(drawMinimap, 1000);
+
 })();
