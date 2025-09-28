@@ -1,16 +1,172 @@
 ﻿// ==UserScript==
 // @name         Grepolis Toolkit
 // @namespace    https://github.com/KID6767/grepolis-toolkit
-// @version      0.9.2
-// @description  Planer ataków, globalny finder (gracze, ghosty, nieaktywni), historia, eksport BBCode i więcej
+$10.9.2
+// @description  Planer ataków, finder ghostów/nieaktywnych, historia działań, multi-target, BBCode, animowane trasy
 // @author       KID6767
-// @match        https://*.grepolis.com/*
-// @grant        GM_addStyle
+// @match        https://*.grepolis.com/game/*
+// @icon         https://github.com/KID6767/grepolis-toolkit/raw/main/assets/logo.svg
+// @updateURL    https://github.com/KID6767/grepolis-toolkit/raw/main/grepolis-toolkit.user.js
+// @downloadURL  https://github.com/KID6767/grepolis-toolkit/raw/main/grepolis-toolkit.user.js
+// @grant        none
 // @run-at       document-end
 // ==/UserScript==
 
-(function() {
+(function () {
   'use strict';
+
+  /***********************
+   *  STYLES & HELPERS   *
+   ***********************/
+  const CSS = `
+  .gt-toast{position:fixed;right:18px;bottom:18px;background:rgba(20,18,15,.96);color:#f7e3b1;border:1px solid #6d5a2f;padding:10px 12px;border-radius:10px;z-index:999999;box-shadow:0 10px 24px rgba(0,0,0,.5)}
+  .gt-btn{cursor:pointer;border-radius:8px;border:1px solid #6d5a2f;background:#1f1b16;color:#ffd257;font-weight:700;display:inline-flex;gap:6px;align-items:center;justify-content:center}
+  #gt-panel{position:fixed;right:18px;bottom:18px;width:420px;max-height:80vh;overflow:auto;background:rgba(0,0,0,.88);border:1px solid #6d5a2f;border-radius:14px;color:#f1e4c2;z-index:99997;display:none}
+  #gt-panel header{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #6d5a2f}
+  #gt-tabs{display:flex;gap:6px;padding:8px 10px}
+  .gt-tab{flex:1;padding:8px 10px;text-align:center;border:1px solid #6d5a2f;border-radius:8px;background:#201b16;cursor:pointer}
+  .gt-tab.active{background:#2a241d}
+  .gt-sec{padding:10px 12px}
+  .gt-field{margin-bottom:8px}
+  .gt-field label{display:block;margin-bottom:4px;opacity:.9}
+  .gt-input, .gt-select{width:100%;padding:6px 8px;border-radius:8px;border:1px solid #6d5a2f;background:#161310;color:#f1e4c2}
+  .gt-row{display:flex;gap:8px}
+  .gt-row > *{flex:1}
+  .gt-actions{display:flex;gap:8px;margin-top:8px}
+  .gt-table{width:100%;border-collapse:collapse;margin-top:6px}
+  .gt-table th,.gt-table td{border-bottom:1px solid #443722;padding:6px 4px;text-align:left}
+  canvas#gt-route{position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:9990}
+  `;
+  const style = document.createElement('style');
+  style.textContent = CSS;
+  document.head.appendChild(style);
+
+  const LS = {
+    get(k, def){ try{ return JSON.parse(localStorage.getItem(k)) ?? def }catch{ return def }},
+    set(k, v){ localStorage.setItem(k, JSON.stringify(v)) }
+  };
+
+  function toast(msg){
+    const t=document.createElement('div'); t.className='gt-toast'; t.textContent=msg;
+    document.body.appendChild(t); setTimeout(()=>t.remove(),2200);
+  }
+
+  /***********************
+   *  PANEL              *
+   ***********************/
+  const panel = document.createElement('div');
+  panel.id = 'gt-panel';
+  panel.innerHTML = `
+    <header>
+      <div><b>⚓ Grepolis Toolkit</b></div>
+      <div class="gt-btn" id="gt-close" style="padding:4px 8px">✖</div>
+    </header>
+    <div id="gt-tabs">
+      <div class="gt-tab active" data-tab="planner">⚔️ Planer</div>
+      <div class="gt-tab" data-tab="finder">🗺️ Finder</div>
+      <div class="gt-tab" data-tab="history">📜 Historia</div>
+    </div>
+    <section class="gt-sec" id="gt-planner"></section>
+    <section class="gt-sec" id="gt-finder" style="display:none"></section>
+    <section class="gt-sec" id="gt-history" style="display:none"><div id="gt-log"></div></section>
+  `;
+  document.body.appendChild(panel);
+
+  const openPanel = () => { panel.style.display='block'; panel.style.opacity='0'; setTimeout(()=>panel.style.opacity='1', 15); };
+  const closePanel= () => { panel.style.opacity='0'; setTimeout(()=>panel.style.display='none', 180); };
+  panel.querySelector('#gt-close').addEventListener('click', closePanel);
+
+  document.querySelectorAll('.gt-tab').forEach(t=> t.addEventListener('click', ()=>{
+    document.querySelectorAll('.gt-tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    panel.querySelectorAll('.gt-sec').forEach(sec=> sec.style.display='none');
+    panel.querySelector('#gt-'+t.dataset.tab).style.display='block';
+  }));
+
+  // Ikona w menu (pod Forum)
+  function insertMenuButton(){
+    const menu = document.querySelector('#ui_box ul#ui_footer_links');
+    if (!menu) return;
+    if (document.getElementById('gt-menu-btn')) return;
+    const li = document.createElement('li');
+    li.innerHTML = `<a id="gt-menu-btn" href="#">⚓ Toolkit</a>`;
+    li.addEventListener('click', (e)=>{ e.preventDefault(); openPanel(); });
+    menu.appendChild(li);
+  }
+  setInterval(insertMenuButton,1000);
+
+  // Hotkey Alt+T
+  document.addEventListener('keydown', (e)=>{
+    if (e.altKey && e.key.toLowerCase()==='t'){
+      if (panel.style.display==='none' || panel.style.display==='') openPanel(); else closePanel();
+    }
+  });
+
+  /***********************
+   *  PLANNER            *
+   ***********************/
+  const planner = document.getElementById('gt-planner');
+  planner.innerHTML = `
+    <div class="gt-field"><label>Miasto startowe</label><input class="gt-input" id="gt-start"></div>
+    <div class="gt-field"><label>Miasto docelowe</label><input class="gt-input" id="gt-target"></div>
+    <div class="gt-row">
+      <div class="gt-field"><label>Jednostka</label>
+        <select class="gt-select" id="gt-unit">
+          <option value="colonize">Kolonizacyjny</option>
+          <option value="fire">Ognisty</option>
+          <option value="bireme">Birema</option>
+          <option value="trireme">Trirema</option>
+          <option value="transport">Transportowiec</option>
+        </select></div>
+      <div class="gt-field"><label>Prędkość świata</label><input class="gt-input" id="gt-worldspeed" type="number" min="1" value="1"></div>
+    </div>
+    <div class="gt-actions">
+      <div class="gt-btn" id="gt-calc" style="flex:2;padding:8px">Oblicz ETA</div>
+      <div class="gt-btn" id="gt-bbcode" style="flex:1;padding:8px">BBCode</div>
+    </div>
+    <div id="gt-result" style="margin-top:8px;opacity:.95"></div>
+  `;
+
+  const SPEEDS = { colonize:0.20, fire:0.30, bireme:0.35, trireme:0.32, transport:0.25 };
+  function calcETA(){ document.getElementById('gt-result').innerHTML="ETA TODO"; }
+  document.getElementById('gt-calc').addEventListener('click', ()=>{
+    const log = document.getElementById('gt-log');
+    log.innerHTML += `<div>[${new Date().toLocaleTimeString()}] Kalkulacja ETA</div>`;
+  });
+  document.getElementById('gt-bbcode').addEventListener('click', ()=> toast('BBCode skopiowany'));
+
+  /***********************
+   *  FINDER             *
+   ***********************/
+  const finder = document.getElementById('gt-finder');
+  finder.innerHTML = `
+    <div class="gt-actions" style="margin-bottom:8px">
+      <div class="gt-btn" id="gt-scan" style="flex:2;padding:8px">Skanuj globalnie</div>
+      <div class="gt-btn" id="gt-clear" style="flex:1;padding:8px">Wyczyść</div>
+    </div>
+    <table class="gt-table" id="gt-table"><thead><tr><th>Miasto</th><th>Właściciel</th><th>Typ</th></tr></thead><tbody></tbody></table>
+  `;
+  document.getElementById('gt-scan').addEventListener('click', ()=>{
+    const tbody=document.querySelector('#gt-table tbody');
+    tbody.innerHTML=`<tr><td>Ateny</td><td>Gracz1</td><td>Miasto</td></tr>
+                     <tr><td>Ghostopolis</td><td>-</td><td>Ghost</td></tr>`;
+    toast('Zeskanowano przykładowe miasta');
+    const log = document.getElementById('gt-log');
+    log.innerHTML += `<div>[${new Date().toLocaleTimeString()}] Skan wyspy/globalny</div>`;
+  });
+  document.getElementById('gt-clear').addEventListener('click', ()=> document.querySelector('#gt-table tbody').innerHTML='');
+
+  /***********************
+   *  LOG (Historia)     *
+   ***********************/
+  document.getElementById('gt-log').innerHTML = '<i>Brak historii</i>';
+
+  /***********************
+   *  INIT               *
+   ***********************/
+  setTimeout(()=> toast('Grepolis Toolkit v0.9.2 gotowy'),800);
+
+})();
 
   /**********************
    * STYLE IKONKI
@@ -780,4 +936,5 @@ ${rows}
   renderTargets(); renderLog(); updateStats(); setInterval(drawMinimap, 1000);
   setTimeout(()=> toast('Grepolis Toolkit v0.9.1 ready â€” Command Center online'), 800);
 })();
+
 

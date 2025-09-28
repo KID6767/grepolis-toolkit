@@ -38,3 +38,4 @@ Zmiany sÄ… opisane w pliku [CHANGELOG.md](CHANGELOG.md).
 - **KID6767**  
 - **ChatGPT (OpenAI)** â€“ wsparcie przy kodzie i automatyzacjach  
 
+

@@ -1,10 +1,8 @@
 param(
-    [string]$Version = ""
+    [string]$Version
 )
 
-if (-not $Version) {
-    Write-Host "Usage: .\run-update.ps1 -Version 0.8"
-    exit 1
-}
+Write-Host "=== Grepolis Toolkit Release $Version ==="
 
-& "$PSScriptRoot\update.ps1" -Version $Version
+# Run update.ps1 with correct path
+& "$PSScriptRoot\update.ps1" -Path $PSScriptRoot -Version $Version

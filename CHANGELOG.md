@@ -1,4 +1,7 @@
-﻿## v0.9.1 (2025-09-28)
+﻿## [0.9.2] - 2025-09-28
+- Release 0.9.2
+
+## v0.9.1 (2025-09-28)
 - Global Finder (ghost/player/alliance/radius) with filters
 - Multi-target Planner (list, per-target route, BBCode all)
 - Activity Log (scans/calcs/exports) + stats
