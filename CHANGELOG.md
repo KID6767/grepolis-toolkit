@@ -1,4 +1,9 @@
-﻿## v0.8 (2025-09-28)
+﻿## v0.9.1 (2025-09-28)
+- Global Finder (ghost/player/alliance/radius) with filters
+- Multi-target Planner (list, per-target route, BBCode all)
+- Activity Log (scans/calcs/exports) + stats
+- Minimap, notifications, export/import JSON, quick actions dock
+## v0.8 (2025-09-28)
 - Global Finder: player, alliance, ghosts near (beta)
 - Planner: ETA h:m:s, auto world speed, calculation history
 - BBCode v2
@@ -43,4 +48,5 @@
 
 ## [0.9] - 2025-09-28
 - Updated features and fixes
+
 
