@@ -15,3 +15,10 @@ if (Test-Path $readmePath) {
         Write-Host "[OK] README.md – dodano logo i nagłówek"
     }
 }
+
+## Features
+- Attack Planner (name/ID search, buffs, ETA, route overlay)
+- Global Finder (Player / Alliance / Ghosts near)
+- BBCode export
+- Calculation history
+- Panel docked under Forum
