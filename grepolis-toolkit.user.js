@@ -1,8 +1,8 @@
-Ôªø// ==UserScript==
+// ==UserScript==
 // @name         Grepolis Toolkit
 // @namespace    https://github.com/KID6767/grepolis-toolkit
 // @version      0.6
-// @description  Planer atak√≥w, nieaktywni gracze, ghost towns i wiƒôcej
+// @description  Planer atakÛw, nieaktywni gracze, ghost towns i wiÍcej
 // @author       KID6767 & ChatGPT
 // @match        https://*.grepolis.com/game/*
 // @icon         https://github.com/KID6767/grepolis-toolkit/raw/main/assets/logo.svg
@@ -14,10 +14,10 @@
 (function() {
     'use strict';
 
-    // Dodajemy ikonkƒô do interfejsu
-    const menu = document.querySelector('#ui_box'); // g≈Ç√≥wny UI
+    // Dodajemy ikonkÍ do interfejsu
+    const menu = document.querySelector('#ui_box'); // g≥Ûwny UI
     const btn = document.createElement('div');
-    btn.innerHTML = '‚öîÔ∏è Toolkit';
+    btn.innerHTML = '?? Toolkit';
     btn.style.cssText = `
         cursor:pointer;
         background:#222;
@@ -34,7 +34,7 @@
     panel.id = "toolkitPanel";
     panel.innerHTML = `
         <div style="padding:10px;color:white;">
-            <h3>Planer Atak√≥w</h3>
+            <h3>Planer AtakÛw</h3>
             <label>Miasto startowe: <input id="startCity" type="text" placeholder="123|456"></label><br>
             <label>Miasto docelowe: <input id="targetCity" type="text" placeholder="321|654"></label><br>
             <label>Jednostka:
@@ -61,7 +61,7 @@
     `;
     document.body.appendChild(panel);
 
-    // Obs≈Çuga klikniƒôcia
+    // Obs≥uga klikniÍcia
     btn.addEventListener('click', () => {
         if (panel.style.display === "none") {
             panel.style.display = "block";
