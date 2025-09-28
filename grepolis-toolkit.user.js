@@ -1,19 +1,102 @@
 ﻿// ==UserScript==
 // @name         Grepolis Toolkit
 // @namespace    https://github.com/KID6767/grepolis-toolkit
-$10.9.1
-// @description  Command Center: global finder (ghost/inactive/player/alliance), multi-target planner, logs, minimap, notifications, BBCode export/import
+// @version      0.9.2
+// @description  Planer ataków, globalny finder (gracze, ghosty, nieaktywni), historia, eksport BBCode i więcej
 // @author       KID6767
-// @match        https://*.grepolis.com/game/*
-// @icon         https://github.com/KID6767/grepolis-toolkit/raw/main/assets/logo.svg
-// @updateURL    https://github.com/KID6767/grepolis-toolkit/raw/main/grepolis-toolkit.user.js
-// @downloadURL  https://github.com/KID6767/grepolis-toolkit/raw/main/grepolis-toolkit.user.js
-// @grant        none
+// @match        https://*.grepolis.com/*
+// @grant        GM_addStyle
 // @run-at       document-end
 // ==/UserScript==
 
-(function () {
+(function() {
   'use strict';
+
+  /**********************
+   * STYLE IKONKI
+   **********************/
+  GM_addStyle(`
+    #gt-toggle {
+      width: 42px;
+      height: 42px;
+      background: #1f1b16;
+      border: 1px solid #6d5a2f;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: #ffd257;
+      cursor: pointer;
+      margin: 6px auto;
+    }
+    #gt-toggle:hover {
+      filter: brightness(1.2);
+    }
+  `);
+
+  /**********************
+   * PANEL
+   **********************/
+  const GT = {
+    panel: null,
+    togglePanel() {
+      if (!this.panel) {
+        this.initPanel();
+      }
+      this.panel.style.display = this.panel.style.display === 'none' ? 'block' : 'none';
+    },
+    initPanel() {
+      this.panel = document.createElement('div');
+      this.panel.id = 'gt-panel';
+      this.panel.style.cssText = `
+        position:fixed;bottom:20px;right:20px;width:420px;height:300px;
+        background:rgba(0,0,0,0.85);border:1px solid #6d5a2f;border-radius:12px;
+        color:#f1e4c2;z-index:99999;padding:10px;display:none;
+      `;
+      this.panel.innerHTML = `<h3>Grepolis Toolkit</h3><p>Panel 0.9.2</p>`;
+      document.body.appendChild(this.panel);
+    }
+  };
+  window.GT = GT;
+
+  /**********************
+   * IKONKA W MENU
+   **********************/
+  function addToggleButton() {
+    if (document.getElementById('gt-toggle')) return;
+
+    const forumBtn = document.querySelector('#ui_box .menu_inner a[href*="forum"]');
+    if (!forumBtn) return;
+
+    const wrapper = document.createElement('div');
+    wrapper.id = 'gt-toggle';
+    wrapper.title = 'Grepolis Toolkit – kliknij, aby otworzyć/zamknąć';
+    wrapper.textContent = 'GT';
+    wrapper.onclick = () => GT.togglePanel();
+
+    forumBtn.parentElement.insertAdjacentElement('afterend', wrapper);
+  }
+
+  /**********************
+   * HOTKEY (Alt+T)
+   **********************/
+  document.addEventListener('keydown', e => {
+    if (e.altKey && e.key.toLowerCase() === 't') {
+      e.preventDefault();
+      GT.togglePanel();
+    }
+  });
+
+  /**********************
+   * INIT
+   **********************/
+  const observer = new MutationObserver(() => {
+    addToggleButton();
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+
+})();
 
   /***********************
    *  STYLES & HELPERS   *
