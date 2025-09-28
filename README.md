@@ -1,19 +1,17 @@
-﻿<p align="center">
-  <img src="assets/logo.svg" alt="Grepolis Toolkit" width="200"/>
-</p>
-
-<h1 align="center">⚔️ Grepolis Toolkit</h1>
-
+# README – logo i nagłówek
+if (Test-Path $readmePath) {
+    $rd = Get-Content $readmePath -Raw
+    if ($rd -notmatch '<img src="assets/logo.svg"') {
+        $logoBlock = @"
 <p align="center">
-  <b>Nieoficjalny dodatek do Grepolis</b><br/>
-  Planer ataków, analiza nieaktywnych graczy, ghost towns i więcej 🚀
+  <img src="assets/logo.svg" width="120" alt="Grepolis Toolkit logo"/>
 </p>
 
----
+<h1 align="center">Grepolis Toolkit</h1>
 
-## Features
-- Planer ataków z ETA
-- Wyszukiwanie ghost towns
-- Analiza nieaktywnych graczy
-- Ikona w UI gry do rozwijania panelu
-- Animacje panelu
+"@
+        $rd = $logoBlock + $rd
+        Set-Content $readmePath $rd -Encoding UTF8
+        Write-Host "[OK] README.md – dodano logo i nagłówek"
+    }
+}

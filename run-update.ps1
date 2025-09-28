@@ -1,13 +1,11 @@
 param(
-    [string]$Version
+    [string]$Version = ""
 )
 
 if (-not $Version) {
-    Write-Host "❌ Musisz podać numer wersji, np.: .\run-update.ps1 -Version 0.5"
+    Write-Host "❌ Musisz podać wersję, np.: .\run-update.ps1 -Version 0.7"
     exit 1
 }
 
-$repoPath = "C:\Users\macie\Documents\GitHub\grepolis-toolkit"
-$updateScript = Join-Path $repoPath "update.ps1"
-
-& $updateScript -Path $repoPath -Version $Version
+# Uruchamiamy właściwy update.ps1
+& "$PSScriptRoot\update.ps1" -Version $Version

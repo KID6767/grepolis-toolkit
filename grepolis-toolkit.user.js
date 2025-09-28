@@ -1,4 +1,4 @@
-﻿// ==UserScript==
+// ==UserScript==
 // @name         Grepolis Toolkit
 // @namespace    https://github.com/KID6767/grepolis-toolkit
 // @version      0.7

@@ -1,3 +1,6 @@
+## v0.7 - 2025-09-28
+- Aktualizacja funkcji i poprawki
+
 ## [0.6] - 2025-09-28
 ### Added
 - Ikonka do otwierania/zamykania panelu.
