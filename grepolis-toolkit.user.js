@@ -1,16 +1,69 @@
 ﻿// ==UserScript==
 // @name         Grepolis Toolkit
 // @namespace    https://github.com/KID6767/grepolis-toolkit
-// @version      0.9.2
-// @description  Planer ataków, finder ghostów/nieaktywnych, historia działań, multi-target, BBCode, animowane trasy
+// @version      0.9.3
+// @description  Planer ataków, wyszukiwarka miast/ghostów, eksport BBCode, log działań i więcej
 // @author       KID6767
-// @match        https://*.grepolis.com/game/*
-// @icon         https://github.com/KID6767/grepolis-toolkit/raw/main/assets/logo.svg
+// @match        https://*.grepolis.com/*
+// @match        http://*.grepolis.com/*
+// @exclude      https://forum*.grepolis.*/*
+// @exclude      http://forum*.grepolis.*/*
+// @grant        GM_addStyle
 // @updateURL    https://github.com/KID6767/grepolis-toolkit/raw/main/grepolis-toolkit.user.js
 // @downloadURL  https://github.com/KID6767/grepolis-toolkit/raw/main/grepolis-toolkit.user.js
-// @grant        none
-// @run-at       document-end
 // ==/UserScript==
+
+(function() {
+    'use strict';
+
+    /*************** Ikona Toolkita ***************/
+    function addToolkitIcon() {
+        if (document.getElementById('gt-icon')) return;
+
+        const btn = document.createElement('div');
+        btn.id = 'gt-icon';
+        btn.style.cssText = `
+            position:absolute;
+            left:42px; top:118px; /* dopasuj w razie przesunięcia */
+            width:26px; height:26px;
+            background:url('https://raw.githubusercontent.com/KID6767/grepolis-toolkit/main/assets/logo.png') no-repeat center/contain;
+            cursor:pointer;
+            z-index:99999;
+        `;
+        btn.title = "Grepolis Toolkit";
+
+        btn.onclick = () => {
+            const panel = document.getElementById('gt-panel');
+            if (panel) {
+                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            }
+        };
+
+        document.body.appendChild(btn);
+    }
+
+    /*************** Toast przy starcie ***************/
+    function showToolkitToast() {
+        const el = document.createElement('div');
+        el.textContent = "✅ Grepolis Toolkit aktywny";
+        el.style.cssText = `
+            position:fixed; right:20px; bottom:20px;
+            background:rgba(25,22,18,.9); color:#ffd257;
+            padding:10px 14px; border-radius:10px;
+            font-weight:600; z-index:99999;
+            box-shadow:0 8px 20px rgba(0,0,0,.5);
+        `;
+        document.body.appendChild(el);
+        setTimeout(()=> el.remove(), 2500);
+    }
+
+    /*************** Start ***************/
+    setTimeout(() => {
+        addToolkitIcon();
+        showToolkitToast();
+    }, 2000);
+
+})();
 
 (function () {
   'use strict';
