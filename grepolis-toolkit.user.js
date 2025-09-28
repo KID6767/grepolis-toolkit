@@ -731,16 +731,32 @@ ${rows}
   }));
 
   // Ikona w menu (pod Forum)
-  function insertMenuButton(){
-    const menu = document.querySelector('#ui_box ul#ui_footer_links');
-    if (!menu) return;
-    if (document.getElementById('gt-menu-btn')) return;
-    const li = document.createElement('li');
-    li.innerHTML = `<a id="gt-menu-btn" href="#">⚓ Toolkit</a>`;
-    li.addEventListener('click', (e)=>{ e.preventDefault(); openPanel(); });
-    menu.appendChild(li);
-  }
-  setInterval(insertMenuButton,1000);
+  function insertMenuButton() {
+  const menu = document.querySelector('#ui_box ul#ui_footer_links');
+  if (!menu) return; // menu jeszcze nie istnieje
+  if (document.getElementById('gt-menu-btn')) return; // już dodane
+
+  const li = document.createElement('li');
+  li.innerHTML = `<a id="gt-menu-btn" href="#">GT</a>`;
+  li.addEventListener('click', (e) => {
+    e.preventDefault();
+    // otwieranie panelu
+    if (panel.style.display === 'none' || panel.style.display === '') {
+      openPanel();
+    } else {
+      closePanel();
+    }
+  });
+  menu.appendChild(li);
+}
+
+// nasłuch na zmiany w DOM
+const menuObs = new MutationObserver(insertMenuButton);
+menuObs.observe(document.body, { childList: true, subtree: true });
+
+// awaryjnie spróbuj po 2 sekundach
+setTimeout(insertMenuButton, 2000);
+
 
   // Hotkey Alt+T
   document.addEventListener('keydown', (e)=>{
