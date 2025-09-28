@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         Grepolis Toolkit
 // @namespace    https://github.com/KID6767/grepolis-toolkit
-$10.9.2
+// @version      0.9.2
 // @description  Planer ataków, finder ghostów/nieaktywnych, historia działań, multi-target, BBCode, animowane trasy
 // @author       KID6767
 // @match        https://*.grepolis.com/game/*
@@ -936,5 +936,3 @@ ${rows}
   renderTargets(); renderLog(); updateStats(); setInterval(drawMinimap, 1000);
   setTimeout(()=> toast('Grepolis Toolkit v0.9.1 ready â€” Command Center online'), 800);
 })();
-
-
