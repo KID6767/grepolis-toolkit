@@ -1,79 +1,87 @@
 param(
     [string]$Path = ".",
-    [string]$Version
+    [string]$Version = "0.6"
 )
 
-if (-not $Version) {
-    Write-Host "❌ Musisz podać numer wersji, np. -Version '0.5'"
-    exit 1
+Set-Location $Path
+
+# Pliki
+$userJs = "grepolis-toolkit.user.js"
+$readme = "README.md"
+$changelog = "CHANGELOG.md"
+$assets = "assets"
+
+if (-not (Test-Path $assets)) {
+    New-Item -ItemType Directory -Path $assets | Out-Null
 }
 
-$repoPath = Resolve-Path $Path
-Set-Location $repoPath
-
-$changelogPath = Join-Path $repoPath "CHANGELOG.md"
-$readmePath    = Join-Path $repoPath "README.md"
-$userjsPath    = Join-Path $repoPath "grepolis-toolkit.user.js"
-$assetsPath    = Join-Path $repoPath "assets"
-
-# 🔹 1. Upewniamy się, że assets istnieje
-if (-not (Test-Path $assetsPath)) {
-    New-Item -ItemType Directory -Path $assetsPath | Out-Null
-    Write-Host "[OK] Utworzono katalog assets/"
+# ---------------------------
+# USER.JS
+# ---------------------------
+if (Test-Path $userJs) {
+    (Get-Content $userJs) -replace "(?<=@version\s+)\d+\.\d+", $Version | 
+        Set-Content $userJs
+    Write-Host "[OK] Podbito wersję w $userJs → $Version"
 }
 
-# 🔹 2. Podbijamy wersję w grepolis-toolkit.user.js
-if (Test-Path $userjsPath) {
-    $content = Get-Content $userjsPath
-    $newContent = $content -replace '(?<=// @version\s+)(\d+\.\d+)', $Version
-    Set-Content $userjsPath $newContent -Encoding UTF8
-    Write-Host "[OK] Podbito wersję w grepolis-toolkit.user.js → $Version"
-} else {
-    Write-Host "[WARN] Nie znaleziono pliku grepolis-toolkit.user.js"
-}
+# ---------------------------
+# README.md
+# ---------------------------
+$logoSvg = @"
+<p align="center">
+  <img src="assets/logo.svg" alt="Grepolis Toolkit" width="200"/>
+</p>
 
-# 🔹 3. Aktualizacja CHANGELOG.md
-$date = Get-Date -Format "yyyy-MM-dd"
-$entry = @"
-## [$Version] - $date
-### Added
-- Nowy planer ataków (zastępuje kalkulator).
-- Obliczanie ETA (dokładna godzina dotarcia).
-- Obsługa buffów (Posejdon, żagle, kapitan).
-- Animowane linie tras statków (kolonizacyjny, birema, trirema, ogniowy, transportowy).
+<h1 align="center">⚔️ Grepolis Toolkit</h1>
 
-### Fixed
-- Automatyczne podbijanie wersji w user.js (dla Tampermonkey).
+<p align="center">
+  <b>Nieoficjalny dodatek do Grepolis</b><br/>
+  Planer ataków, analiza nieaktywnych graczy, ghost towns i więcej 🚀
+</p>
+
+---
 "@
 
-if (Test-Path $changelogPath) {
-    $old = Get-Content $changelogPath
-    Set-Content $changelogPath ($entry + "`n" + ($old -join "`n")) -Encoding UTF8
-    Write-Host "[OK] CHANGELOG.md zaktualizowany"
-}
-
-# 🔹 4. Aktualizacja README.md (dopisz Features jeśli brak)
-$featuresBlock = @"
-## Features
-- Toolkit panel (Nieaktywni gracze, Ghost Towns)
-- Planer ataków z ETA i buffami
-- Animowane linie tras statków
-- Eksport planów do BBCode (forum sojuszu)
-"@
-
-if (Test-Path $readmePath) {
-    $readmeContent = Get-Content $readmePath -Raw
-    if ($readmeContent -notmatch "## Features") {
-        Add-Content $readmePath "`n$featuresBlock"
-        Write-Host "[OK] README.md uzupełniony o Features"
+if (Test-Path $readme) {
+    $content = Get-Content $readme -Raw
+    if ($content -notmatch "Grepolis Toolkit") {
+        Set-Content $readme ($logoSvg + "`n" + $content)
+        Write-Host "[OK] README.md uzupełniony o logo i nagłówek"
     }
+} else {
+    Set-Content $readme $logoSvg
+    Write-Host "[OK] README.md stworzony"
 }
 
-# 🔹 5. Git add / commit / tag / push
+# ---------------------------
+# CHANGELOG.md
+# ---------------------------
+$entry = @"
+## [$Version] - $(Get-Date -Format yyyy-MM-dd)
+### Added
+- Ikonka do otwierania/zamykania panelu.
+- Animacje (slide-in, fade-in).
+- Zapamiętywanie jednostki i buffów.
+- README.md odświeżone (logo, nagłówki, badge).
+### Fixed
+- Poprawki w kodzie panelu, usunięte placeholdery.
+
+"@
+
+if (Test-Path $changelog) {
+    $old = Get-Content $changelog -Raw
+    Set-Content $changelog ($entry + "`n" + $old)
+} else {
+    Set-Content $changelog $entry
+}
+Write-Host "[OK] CHANGELOG.md zaktualizowany"
+
+# ---------------------------
+# GIT COMMIT + TAG
+# ---------------------------
 git add .
 git commit -m "Release $Version"
-git tag "v$Version"
-git push origin main
-git push origin "v$Version"
+git tag v$Version
+git push origin main --tags
 
 Write-Host "[DONE] Release $Version gotowy i wypchnięty na GitHub"
