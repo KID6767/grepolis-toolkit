@@ -1,8 +1,8 @@
-// ==UserScript==
+﻿// ==UserScript==
 // @name         Grepolis Toolkit
 // @namespace    https://github.com/KID6767/grepolis-toolkit
-// @version      0.4
-// @description  Toolkit: Nieaktywni, Ghost Towny, Symulator podróży z animowanymi trasami
+// @version      0.5
+// @description  Toolkit: Nieaktywni, Ghost Towny, Symulator podrĂłĹĽy z animowanymi trasami
 // @author       Ty
 // @match        https://*.grepolis.com/game/*
 // @grant        none
@@ -39,9 +39,9 @@
             if (history.length > 10) history.shift();
             localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
 
-            console.log("✅ Grepolis Toolkit v0.4 - dane pobrane:", snapshot);
+            console.log("âś… Grepolis Toolkit v0.4 - dane pobrane:", snapshot);
         } catch (err) {
-            console.error("❌ Błąd pobierania danych Grepolis:", err);
+            console.error("âťŚ BĹ‚Ä…d pobierania danych Grepolis:", err);
         }
     }
 
@@ -50,7 +50,7 @@
         const menu = document.getElementById('ui_box');
         if (!menu) return;
         const btn = document.createElement('div');
-        btn.innerText = '⚒ Toolkit';
+        btn.innerText = 'âš’ Toolkit';
         btn.style.cursor = 'pointer';
         btn.style.padding = '5px';
         btn.style.background = '#333';
@@ -77,15 +77,15 @@
             .tab.active { background:#444; color:#fff; }
             .tabContent { display:none; padding:10px; }
             </style>
-            <div style="background:#444;color:#fff;padding:5px">⚒ Grepolis Toolkit v0.4</div>
+            <div style="background:#444;color:#fff;padding:5px">âš’ Grepolis Toolkit v0.4</div>
             <div id="gtabs">
                 <div class="tab active" data-tab="inactive">Nieaktywni</div>
                 <div class="tab" data-tab="ghosts">Ghost Towny</div>
                 <div class="tab" data-tab="simulator">Symulator</div>
             </div>
             <div id="gcontent">
-                <div id="inactive" class="tabContent" style="display:block">Raport nieaktywnych - wkrótce</div>
-                <div id="ghosts" class="tabContent">Lista ghostów - wkrótce</div>
+                <div id="inactive" class="tabContent" style="display:block">Raport nieaktywnych - wkrĂłtce</div>
+                <div id="ghosts" class="tabContent">Lista ghostĂłw - wkrĂłtce</div>
                 <div id="simulator" class="tabContent">
                     <label>Start (x|y): <input id="startCoords" placeholder="500|500"/></label><br/>
                     <label>Cel (x|y): <input id="targetCoords" placeholder="505|503"/></label><br/>
@@ -103,7 +103,7 @@
             </div>`;
         document.body.appendChild(win);
 
-        // obsługa tabów
+        // obsĹ‚uga tabĂłw
         win.querySelectorAll('.tab').forEach(tab => {
             tab.onclick = () => {
                 win.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -113,13 +113,13 @@
             };
         });
 
-        // obsługa symulatora
+        // obsĹ‚uga symulatora
         document.getElementById('simulateBtn').onclick = () => {
             const start = document.getElementById('startCoords').value.split('|').map(Number);
             const target = document.getElementById('targetCoords').value.split('|').map(Number);
             const ship = document.getElementById('shipType').value;
             if (start.length !== 2 || target.length !== 2) {
-                alert("Podaj poprawne współrzędne");
+                alert("Podaj poprawne wspĂłĹ‚rzÄ™dne");
                 return;
             }
             drawRoute(start, target, ship);
@@ -161,7 +161,7 @@
             ctx.setLineDash([10, 10]);
             ctx.lineDashOffset = -offset;
             ctx.beginPath();
-            ctx.moveTo(x1 * 5, y1 * 5); // przeskalowane dla widoczności
+            ctx.moveTo(x1 * 5, y1 * 5); // przeskalowane dla widocznoĹ›ci
             ctx.lineTo(x2 * 5, y2 * 5);
             ctx.strokeStyle = colors[ship] || "gray";
             ctx.lineWidth = 3;
